@@ -50,6 +50,50 @@ INITIAL
     "disk"      { return disk; }
 
 
+    "mkfs"      { return mkfs; }
+    "login"     { return login; }
+    "logout"    { return logout; }
+    "mkgrp"     { return mkgrp; }
+    "rmgrp"     { return rmgrp; }
+    "mkusr"     { return mkusr; }
+    "rmusr"     { return rmusr; }
+    "chmod"     { return chmod; }
+    "mkfile"    { return mkfile; }
+    "cat"       { return cat; }
+    "rem"       { return rem; }
+    "edit"      { return edit; }
+    "ren"       { return ren; }
+    "mkdir"     { return mkdir; }
+    "cp"        { return cp; }
+    "mv"        { return mv; }
+    "find"      { return find; }
+    "chown"     { return chown; }
+    "chgrp"     { return chgrp; }
+    "pause"     { return pause; }
+    "recovery"  { return recovery; }
+    "loss"      { return loss; }
+    "-fs"       { return fs; }
+    "-usr"      { return usr; }
+    "-pwd"      { return pwd;  }
+    "-grp"      { return grp; }
+    "-ugo"      { return ugo; }
+    "-r"        { return r; }
+    "-p"        { return p; }
+    "-cont"     { return cont; }
+    "-file"     { return file; }
+    "-dest"     { return dest; }
+    "-ruta"     { return rutaRep; }
+    "inode"     { return inode; }
+    "journaling"{ return journaling; }
+    "block"     { return block; }
+    "bm_inode"  { return bm_inode; }
+    "bm_block"  { return bm_block; }
+    "tree"      { return tree; }
+    "sb"        { return sb; }
+    "file"      { return fileRep; }
+    "ls"        { return ls; }
+
+
     "="         { return igual; }
 
     {entero}    {strcpy(yylval.text, yytext); return num;}
