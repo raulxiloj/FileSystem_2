@@ -9,17 +9,17 @@ No distinguira entre mayúsculas y minúsculas. Solo se puede colocar un comando
 
 ## Comandos
 * FASE 1
-- MKDISK: Creara un archivo binario, simulando un disco duro.
-- RMKDISK: Borrara el archivo.
-- FDISK: Administrara las operaciones que se hagan en una particion como crear, eliminar o quitar espacio.
-- MOUNT: Montara una particion
-- UNMOUNT: Desmontara una particion
-- REP: Generara un reporte tipo imagen
-- EXEC: Ejecutara un archivo con comandos ya escritos. 
+  - MKDISK: Creara un archivo binario, simulando un disco duro.
+  - RMKDISK: Borrara el archivo.
+  - FDISK: Administrara las operaciones que se hagan en una particion como crear, eliminar o quitar espacio.
+  - MOUNT: Montara una particion
+  - UNMOUNT: Desmontara una particion
+  - REP: Generara un reporte tipo imagen
+  - EXEC: Ejecutara un archivo con comandos ya escritos. 
 * FASE 2
-- MKFS
-- Login
-- Logout
+  - MKFS
+  - Login
+  - Logout
 
 ## Herramientas utilizadas:
 - C/C++ (Lenguaje de programacion) 
