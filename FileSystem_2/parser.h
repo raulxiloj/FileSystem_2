@@ -75,7 +75,51 @@ extern int yydebug;
     cadena = 285,
     identificador = 286,
     ruta = 287,
-    comentario = 288
+    mkfs = 288,
+    login = 289,
+    logout = 290,
+    mkgrp = 291,
+    rmgrp = 292,
+    mkusr = 293,
+    rmusr = 294,
+    chmod = 295,
+    mkfile = 296,
+    cat = 297,
+    rem = 298,
+    edit = 299,
+    ren = 300,
+    mkdir = 301,
+    cp = 302,
+    mv = 303,
+    find = 304,
+    chown = 305,
+    chgrp = 306,
+    pause = 307,
+    recovery = 308,
+    loss = 309,
+    fs = 310,
+    fs2 = 311,
+    fs3 = 312,
+    usr = 313,
+    pwd = 314,
+    grp = 315,
+    ugo = 316,
+    r = 317,
+    p = 318,
+    cont = 319,
+    file = 320,
+    dest = 321,
+    rutaRep = 322,
+    inode = 323,
+    journaling = 324,
+    block = 325,
+    bm_inode = 326,
+    bm_block = 327,
+    tree = 328,
+    sb = 329,
+    fileRep = 330,
+    ls = 331,
+    password = 332
   };
 #endif
 
@@ -90,7 +134,7 @@ union YYSTYPE
         class Nodo *nodito;
     
 
-#line 94 "parser.h" /* yacc.c:1909  */
+#line 138 "parser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

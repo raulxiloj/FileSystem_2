@@ -55,6 +55,52 @@
 %token <text> identificador
 %token <text> ruta
 
+%token <text> mkfs
+%token <text> login
+%token <text> logout
+%token <text> mkgrp
+%token <text> rmgrp
+%token <text> mkusr
+%token <text> rmusr
+%token <text> chmod
+%token <text> mkfile
+%token <text> cat
+%token <text> rem
+%token <text> edit
+%token <text> ren
+%token <text> mkdir
+%token <text> cp
+%token <text> mv
+%token <text> find
+%token <text> chown
+%token <text> chgrp
+%token <text> pause
+%token <text> recovery
+%token <text> loss
+%token <text> fs
+%token <text> fs2
+%token <text> fs3
+%token <text> usr
+%token <text> pwd
+%token <text> grp
+%token <text> ugo
+%token <text> r
+%token <text> p
+%token <text> cont
+%token <text> file
+%token <text> dest
+%token <text> rutaRep
+%token <text> inode
+%token <text> journaling
+%token <text> block
+%token <text> bm_inode
+%token <text> bm_block
+%token <text> tree
+%token <text> sb
+%token <text> fileRep
+%token <text> ls
+%token <text> password
+
 /*----------Not terminals------------*/
 %type <nodito> INIT
 %type <nodito> COMANDO
@@ -71,6 +117,38 @@
 %type <nodito> PARAMETRO_R
 %type <nodito> SCRIPT
 
+%type <nodito> MKFS
+%type <nodito> PARAM_MKFS
+%type <nodito> LOGIN
+%type <nodito> PARAM_LOGIN
+%type <nodito> MKGRP
+%type <nodito> RMGRP
+%type <nodito> MKUSR
+%type <nodito> PARAM_MKUSR
+%type <nodito> RMUSR
+%type <nodito> CHMOD
+%type <nodito> PARAM_CHMOD
+%type <nodito> MKFILE
+%type <nodito> PARAM_MKFILE
+%type <nodito> CAT
+%type <nodito> REM
+%type <nodito> EDIT
+%type <nodito> PARAM_EDIT
+%type <nodito> REN
+%type <nodito> PARAM_REN
+%type <nodito> MKDIR
+%type <nodito> PARAM_MKDIR
+%type <nodito> CP
+%type <nodito> PARAM_CP
+%type <nodito> MV
+%type <nodito> FIND
+%type <nodito> PARAM_FIND
+%type <nodito> CHOWN
+%type <nodito> PARAM_CHOWN
+%type <nodito> CHGRP
+%type <nodito> PARAM_CHGRP
+%type <nodito> RECOVERY
+%type <nodito> LOSS
 %start INIT
 
 %%
@@ -94,7 +172,69 @@ COMANDO: mkdisk MKDISK {
          | rep REP { $$ = new Nodo("REP","");
                      $$->add(*$2);
                    }
-         | SCRIPT { $$ = $1; };
+         | SCRIPT { $$ = $1; }
+         | mkfs MKFS {
+                        $$ = new Nodo("MKFS","");
+                        $$->add(*$2);
+                     }
+         | login LOGIN {
+                         $$ = new Nodo("LOGIN", "");
+                         $$->add(*$2);
+                       }
+         | logout { $$ = new Nodo("LOGOUT",""); }
+         | MKGRP { $$ = $1; }
+         | RMGRP { $$ = $1; }
+         | mkusr MKUSR {
+                        $$ = new Nodo("MKUSR","");
+                        $$->add(*$2);
+                       }
+         | RMUSR { $$ = $1; }
+         | chmod CHMOD {
+                         $$ = new Nodo("CHMOD","");
+                         $$->add(*$2);
+                       }
+         | mkfile MKFILE {
+                            $$ = new Nodo("MKFILE","");
+                            $$->add(*$2);
+                         }
+         | CAT { $$ = $1; }
+         | REM { $$ = $1; }
+         | edit EDIT {
+                       $$ = new Nodo("EDIT","");
+                       $$->add(*$2);
+                     }
+         | ren REN{
+                    $$ = new Nodo("REN","");
+                    $$->add(*$2);
+                  }
+         | mkdir MKDIR{
+                        $$ = new Nodo("MKDIR","");
+                        $$->add(*$2);
+                      }
+         | cp CP{
+                  $$ = new Nodo("CP","");
+                  $$->add(*2);
+                }
+         | mv MV{
+                  $$ = new Nodo("MV","");
+                  $$->add(*$2);
+                }
+         | find FIND{
+                      $$ = new Nodo("FIND","");
+                      $$->add(*$2);
+                    }
+         | chown CHOWN{
+                        $$ = new Nodo("CHOWN","");
+                        $$->add(*$2);
+                      }
+         | chgrp CHGRP{
+                        $$ = new Nodo("CHGRP","");
+                        $$->add(*$2);
+                      }
+         | pause { $$ = new Nodo("PAUSE"); }
+         | RECOVERY { $$ = $1; };
+         | LOSS { $$ = $1; }
+         ;
 
 
 
@@ -184,13 +324,20 @@ REP: REP PARAMETRO_R{
 
 PARAMETRO_R: name igual mbr { $$ = new Nodo("name","mbr"); }
              | name igual disk { $$ = new Nodo("name","disk"); }
+             | name igual inode { $$ = new Nodo("name", "inode"); }
+             | name igual journaling { $$ = new Nodo("name", "journaling"); }
+             | name igual block { $$ = new Nodo("name", "block"); }
+             | name igual bm_inode { $$ = new Nodo("name", "bm_inode"); }
+             | name igual bm_block { $$ = new Nodo("name", "bm_block"); }
+             | name igual tree { $$ = new Nodo("name", "tree"); }
+             | name igual sb { $$ = new Nodo("name", "sb"); }
+             | name igual fileRep { $$ = new Nodo("name", "file"); }
+             | name igual ls { $$ = new Nodo("name", "ls"); }
              | path igual cadena{ $$ = new Nodo("path", $3); }
-             | path igual ruta {
-                                $$ = new Nodo("path",$3);
-                               }
-             | id igual identificador {
-                                        $$ = new Nodo("id", $3);
-                                      };
+             | path igual ruta { $$ = new Nodo("path",$3); }
+             | id igual identificador { $$ = new Nodo("id", $3); }
+             | rutaRep igual ruta { $$ = new Nodo("ruta", $3); }
+             | rutaRep igual cadena { $$ = new Nodo("ruta", $3); };
 
 SCRIPT: exec path igual cadena {
                                 $$ = new Nodo("EXEC","");
@@ -202,3 +349,221 @@ SCRIPT: exec path igual cadena {
                                  Nodo *n = new Nodo("path", $4);
                                  $$->add(*n);
                                };
+
+MKFS: MKFS PARAM_MKFS { $$ = $1; }
+      | PARAM_MKFS {
+                      $$ = new Nodo("PARAMETRO", "");
+                      $$->add(*$1);
+                   };
+
+PARAM_MKFS: id igual identificador { $$ = new Nodo("id",$3); }
+            | type igual fast { $$ = new Nodo("type", "fast"); }
+            | type igual full { $$ = new Nodo("type", "full"); }
+            | fs igual fs2 { $$ = new Nodo("fs", "2fs"); }
+            | fs igual fs3 { $$ = new Nodo("fs", "3fs"); };
+
+LOGIN: LOGIN PARAM_LOGIN { $$ = $1; }
+       | PARAM_LOGIN {
+                        $$ = new Nodo("PARAMETRO","");
+                        $$->add(*$1);
+                     };
+
+PARAM_LOGIN: usr igual identificador { $$ = new Nodo("user", $3); }
+            | usr igual cadena { $$ = new Nodo("user", $3); }
+            | pwd igual password { $$ = new Nodo("password", $3); }
+            | pwd igual cadena { $$ = new Nodo("password", $3); }
+            | id igual identificador { $$ = new Nodo("id", $3); };
+
+MKGRP: mkgrp name igual identificador {
+                                        $$ = new Nodo("MKGRP","");
+                                        Nodo *n = new Nodo("name",$4);
+                                        $$->add(*n);
+                                      }
+       | mkgrp name igual cadena {
+                                    $$ = new Nodo("MKGRP","");
+                                    Nodo *n = new Nodo("name",$4);
+                                    $$->add(*n);
+                                 };
+
+RMGRP: rmgrp name igual identificador {
+                                        $$ = new Nodo("RMGRP","");
+                                        Nodo *n = new Nodo("name", $4);
+                                        $$->add(*n);
+                                     }
+       | rmgrp name igual cadena {
+                                    $$ = new Nodo("RMGRP", "");
+                                    Nodo *n = new Nodo("name",$4);
+                                    $$->add(*n);
+                                 };
+MKUSR: MKUSR PARAM_MKUSR { $$ = $1; }
+       | PARAM_MKUSR {
+                        $$ = new Nodo("PARAMETRO", "");
+                        $$->add(*$1);
+                     };
+
+PARAM_MKUSR: usr igual identificador { $$ = new Nodo("user",$3); }
+             | usr igual cadena { $$ = new Nodo("user",$3); }
+             | pwd igual password { $$ = new Nodo("password", $3); }
+             | pwd igual cadena { $$ = new Nodo("password",$3); }
+             | grp igual identificador { $$ = new Nodo("group", $3); };
+
+RMUSR: rmusr usr igual identificador {
+                                        $$ = new Nodo("RMUSR","");
+                                        Nodo *n = new Nodo("user",$4);
+                                        $$->add(*n);
+                                     }
+      | rmusr usr igual cadena {
+                                  $$ = new Nodo("RMUSR", "");
+                                  Nodo *n = new Nodo("user",$4);
+                                  $$->add(*n);
+                               };
+
+CHMOD: CHMOD PARAM_CHMOD { $$ = $1; }
+       | PARAM_CHMOD {
+                       $$ = new Nodo("PARAMETRO","");
+                       $$->add(*$1);
+                     };
+
+PARAM_CHMOD: path igual cadena { $$ = new Nodo("path",$3); }
+            | path igual ruta { $$ = new Nodo("path",$3); }
+            | ugo igual num { $$ = new Nodo("ugo",$3); }
+            | r { $$ = new Nodo("r",""); };
+
+MKFILE: MKFILE PARAM_MKFILE { $$ = $1; }
+        | PARAM_MKFILE{
+                        $$ = new Nodo("PARAMETRO","");
+                        $$->add(*$1);
+                      };
+
+
+PARAM_MKFILE: path igual ruta { $$ = new Nodo("path",$3); }
+              | path igual cadena { $$ = new Nodo("path",$3); }
+              | size igual num { $$ = new Nodo("size",$3); }
+              | cont igual ruta { $$ = new Nodo("cont",$3); }
+              | cont igual cadena { $$ = new Nodo("cont",$3); }
+              | p { $$ = new Nodo("p",""); };
+
+CAT: cat file igual ruta{
+                          $$ = new Nodo("CAT","");
+                          Nodo *n = new Nodo("file",$4);
+                          $$->add(*n);
+                        }
+    | cat file igual cadena{
+                             $$ = new Nodo("CAT","");
+                             Nodo *n = new Nodo("file",$4);
+                             $$->add(*n);
+                           };
+
+REM: rem path igual ruta{
+                          $$ = new Nodo("REM","");
+                          Nodo *n = new Nodo("path",$4);
+                          $$->add(*n);
+                        }
+     | rem path igual cadena{
+                               $$ = new Nodo("REM","");
+                               Nodo *n = new Nodo("path",$4);
+                               $$->add(*n);
+                            };
+
+EDIT: EDIT PARAM_EDIT { $$ = $1; }
+      | PARAM_EDIT {
+                     $$ = new Nodo("PARAMETRO","");
+                     $$->add(*$1);
+                   };
+
+PARAM_EDIT: path igual ruta { $$ = new Nodo("path",$3); }
+            | path igual cadena { $$ = new Nodo("path",$3); }
+            | cont igual cadena { $$ = new Nodo("cont", $3); };
+
+REN: REN PARAM_REN { $$ = $1; }
+     | PARAM_REN {
+                   $$ = new Nodo("PARAMETRO","");
+                   $$->add(*$1);
+                 };
+
+PARAM_REN: path igual ruta { $$ = new Nodo("path", $3); }
+           | path igual cadena { $$ = new Nodo("path",$3); }
+           | name igual identificador extension {
+                                                  $$ = new Nodo("name","");
+                                                  Nodo *n = new Nodo($3,$4);
+                                                  $$->add(*n);
+                                                }
+           | name igual cadena { $$ = new Nodo("name",$3); };
+
+MKDIR: MKDIR PARAM_MKDIR { $$ = $1; }
+       | PARAM_MKDIR{
+                      $$ = new Nodo("PARAMETRO","");
+                      $$->add(*$1);
+                    };
+
+PARAM_MKDIR: path igual ruta { $$ = new Nodo("path",$3); }
+             | path igual cadena { $$ = new Nodo("path",$3); }
+             | id igual identificador { $$ = new Nodo("id",$3);}
+             | p { $$ = new Nodo("p",""); };
+
+CP: CP PARAM_CP{ $$ = $1; }
+    | PARAM_CP{
+                $$ = new Nodo("PARAMETRO","");
+                $$->add(*$1);
+              };
+
+PARAM_CP: path igual ruta { $$ = new Nodo("path",$3); }
+          | path igual cadena { $$ = new Nodo("path",$3); }
+          | dest igual ruta { $$ = new Nodo("dest",$3); }
+          | dest igual cadena { $$ = new Nodo("dest",$3); };
+
+MV: MV PARAM_CP { $$ = $1; }
+    | PARAM_CP{
+                $$ = new Nodo("PARAMETRO","");
+                $$->add(*$1);
+              };
+
+FIND: FIND PARAM_FIND { $$ =$1; }
+      | PARAM_FIND {
+                     $$ = new Nodo("PARAMETRO","");
+                     $$->add(*$1);
+                   };
+
+PARAM_FIND: path igual ruta { $$ = new Nodo("path",$3); }
+            | path igual cadena { $$ = new Nodo("path",$3); }
+            | name igual id extension {
+                                        $$ = new Nodo("name","");
+                                        Nodo *n = new Nodo($3,$4);
+                                        $$->add(*n);
+                                      }
+            | name igual cadena { $$ = new Nodo("name",$3); };
+
+CHOWN: CHOWN PARAM_CHOWN { $$ = $1; }
+       | PARAM_CHOWN {
+                       $$ = new Nodo("PARAMETRO","");
+                       $$->add(*$1);
+                     };
+
+PARAM_CHOWN: path igual ruta { $$ = new Nodo("path",$3); }
+             | path igual cadena { $$ = new Nodo("path", $3); }
+             | usr igual identificador { $$ = new Nodo("user",$3); }
+             | usr igual cadena { $$ = new Nodo("user",$3); }
+             | r { $$ = new Nodo("r",""); };
+
+CHGRP: CHGRP PARAM_CHGRP { $$ = $1; }
+       | PARAM_CHGRP{
+                      $$ = new Nodo("PARAMETRO","");
+                      $$->add(*$1);
+                    };
+
+PARAM_CHGRP: usr igual identificador { $$ = new Nodo("user",$3); }
+             | usr igual cadena { $$ = new Nodo("user",$3); }
+             | grp igual identificador { $$ = new Nodo("group",$3);}
+             | grp igual cadena { $$ = new Nodo("group", $3); };
+
+RECOVERY: recovery id igual identificador {
+                                            $$ = new Nodo("RECOVERY","");
+                                            Nodo *n = new Nodo("id",$4);
+                                            $$->add(*n);
+                                          };
+
+LOSS: loss id igual identificador{
+                                    $$ = new Nodo("LOSS","");
+                                    Nodo *n = new Nodo("id",$4);
+                                    $$->add(*n);
+                                 };
