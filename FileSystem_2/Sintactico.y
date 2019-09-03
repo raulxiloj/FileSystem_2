@@ -62,19 +62,19 @@
 %token <text> rmgrp
 %token <text> mkusr
 %token <text> rmusr
-%token <text> chmod
+%token <text> Rchmod
 %token <text> mkfile
 %token <text> cat
 %token <text> rem
 %token <text> edit
 %token <text> ren
-%token <text> mkdir
+%token <text> Rmkdir
 %token <text> cp
 %token <text> mv
 %token <text> find
-%token <text> chown
+%token <text> Rchown
 %token <text> chgrp
-%token <text> pause
+%token <text> pausa
 %token <text> recovery
 %token <text> loss
 %token <text> fs
@@ -189,7 +189,7 @@ COMANDO: mkdisk MKDISK {
                         $$->add(*$2);
                        }
          | RMUSR { $$ = $1; }
-         | chmod CHMOD {
+         | Rchmod CHMOD {
                          $$ = new Nodo("CHMOD","");
                          $$->add(*$2);
                        }
@@ -207,13 +207,13 @@ COMANDO: mkdisk MKDISK {
                     $$ = new Nodo("REN","");
                     $$->add(*$2);
                   }
-         | mkdir MKDIR{
+         | Rmkdir MKDIR{
                         $$ = new Nodo("MKDIR","");
                         $$->add(*$2);
                       }
          | cp CP{
                   $$ = new Nodo("CP","");
-                  $$->add(*2);
+                  $$->add(*$2);
                 }
          | mv MV{
                   $$ = new Nodo("MV","");
@@ -223,7 +223,7 @@ COMANDO: mkdisk MKDISK {
                       $$ = new Nodo("FIND","");
                       $$->add(*$2);
                     }
-         | chown CHOWN{
+         | Rchown CHOWN{
                         $$ = new Nodo("CHOWN","");
                         $$->add(*$2);
                       }
@@ -231,7 +231,7 @@ COMANDO: mkdisk MKDISK {
                         $$ = new Nodo("CHGRP","");
                         $$->add(*$2);
                       }
-         | pause { $$ = new Nodo("PAUSE"); }
+         | pausa { $$ = new Nodo("PAUSE",""); }
          | RECOVERY { $$ = $1; };
          | LOSS { $$ = $1; }
          ;

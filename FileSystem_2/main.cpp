@@ -61,7 +61,6 @@ enum Choice
     NAME = 15,
     ADD = 16,
     ID = 17,
-    COMENTARIO = 18,
 };
 
 /*
@@ -171,11 +170,6 @@ void reconocerComando(Nodo *raiz)
     case EXEC:
     {
         recorrerEXEC(raiz);
-    }
-        break;
-    case COMENTARIO:
-    {
-
     }
         break;
     default: printf("Error no se reconoce el comando");

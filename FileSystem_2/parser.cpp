@@ -151,19 +151,19 @@ extern int yydebug;
     rmgrp = 292,
     mkusr = 293,
     rmusr = 294,
-    chmod = 295,
+    Rchmod = 295,
     mkfile = 296,
     cat = 297,
     rem = 298,
     edit = 299,
     ren = 300,
-    mkdir = 301,
+    Rmkdir = 301,
     cp = 302,
     mv = 303,
     find = 304,
-    chown = 305,
+    Rchown = 305,
     chgrp = 306,
-    pause = 307,
+    pausa = 307,
     recovery = 308,
     loss = 309,
     fs = 310,
@@ -556,8 +556,8 @@ static const char *const yytname[] =
   "del", "add", "id", "bf", "ff", "wf", "fast", "full", "mbr", "disk",
   "igual", "extension", "num", "caracter", "cadena", "identificador",
   "ruta", "mkfs", "login", "logout", "mkgrp", "rmgrp", "mkusr", "rmusr",
-  "chmod", "mkfile", "cat", "rem", "edit", "ren", "mkdir", "cp", "mv",
-  "find", "chown", "chgrp", "pause", "recovery", "loss", "fs", "fs2",
+  "Rchmod", "mkfile", "cat", "rem", "edit", "ren", "Rmkdir", "cp", "mv",
+  "find", "Rchown", "chgrp", "pausa", "recovery", "loss", "fs", "fs2",
   "fs3", "usr", "pwd", "grp", "ugo", "r", "p", "cont", "file", "dest",
   "rutaRep", "inode", "journaling", "block", "bm_inode", "bm_block",
   "tree", "sb", "fileRep", "ls", "password", "$accept", "INIT", "COMANDO",
@@ -1694,7 +1694,7 @@ yyreduce:
 #line 214 "Sintactico.y" /* yacc.c:1646  */
     {
                   (yyval.nodito) = new Nodo("CP","");
-                  (yyval.nodito)->add(*2);
+                  (yyval.nodito)->add(*(yyvsp[0].nodito));
                 }
 #line 1700 "parser.cpp" /* yacc.c:1646  */
     break;
@@ -1737,7 +1737,7 @@ yyreduce:
 
   case 29:
 #line 234 "Sintactico.y" /* yacc.c:1646  */
-    { (yyval.nodito) = new Nodo("PAUSE"); }
+    { (yyval.nodito) = new Nodo("PAUSE",""); }
 #line 1742 "parser.cpp" /* yacc.c:1646  */
     break;
 

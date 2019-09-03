@@ -58,19 +58,19 @@ INITIAL
     "rmgrp"      { return rmgrp; }
     "mkusr"      { return mkusr; }
     "rmusr"      { return rmusr; }
-    "chmod"      { return chmod; }
+    "chmod"      { return Rchmod; }
     "mkfile"     { return mkfile; }
     "cat"        { return cat; }
     "rem"        { return rem; }
     "edit"       { return edit; }
     "ren"        { return ren; }
-    "mkdir"      { return mkdir; }
+    "mkdir"      { return Rmkdir; }
     "cp"         { return cp; }
     "mv"         { return mv; }
     "find"       { return find; }
-    "chown"      { return chown; }
+    "chown"      { return Rchown; }
     "chgrp"      { return chgrp; }
-    "pause"      { return pause; }
+    "pause"      { return pausa; }
     "recovery"   { return recovery; }
     "loss"       { return loss; }
     "-fs"        { return fs; }
@@ -87,7 +87,7 @@ INITIAL
     "-dest"      { return dest; }
     "-ruta"      { return rutaRep; }
     "inode"      { return inode; }
-    "journaling" { return jorunaling; }
+    "journaling" { return journaling; }
     "block"      { return block; }
     "bm_inode"   { return bm_inode; }
     "bm_block"   { return bm_block; }

@@ -1414,7 +1414,7 @@ YY_RULE_SETUP
 case 33:
 YY_RULE_SETUP
 #line 61 "Lexico.l"
-{ return chmod; }
+{ return Rchmod; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
@@ -1444,7 +1444,7 @@ YY_RULE_SETUP
 case 39:
 YY_RULE_SETUP
 #line 67 "Lexico.l"
-{ return mkdir; }
+{ return Rmkdir; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
@@ -1464,7 +1464,7 @@ YY_RULE_SETUP
 case 43:
 YY_RULE_SETUP
 #line 71 "Lexico.l"
-{ return chown; }
+{ return Rchown; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
@@ -1474,7 +1474,7 @@ YY_RULE_SETUP
 case 45:
 YY_RULE_SETUP
 #line 73 "Lexico.l"
-{ return pause; }
+{ return pausa; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
@@ -1559,7 +1559,7 @@ YY_RULE_SETUP
 case 62:
 YY_RULE_SETUP
 #line 90 "Lexico.l"
-{ return jorunaling; }
+{ return journaling; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
