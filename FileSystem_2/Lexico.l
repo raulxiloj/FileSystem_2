@@ -13,11 +13,12 @@ letra [a-zA-Z]
 entero ("-")?[0-9]+
 caracter ({letra}|{entero})
 id {letra}({letra}|{entero}|"_")*
-password ({letra}|{entero}|[!$@+*/-])+
+password ({letra}|{entero}|[!$@+*-])+
 cadena "\""[^"\""]*"\""
 extension "."{id}
 diagonal "/"
 ruta ({diagonal}{id})+({diagonal}{id}{extension})
+directorio ({diagonal}{id})+
 
 %x COM
 
@@ -106,6 +107,7 @@ INITIAL
     {ruta}      {strcpy(yylval.text, yytext); return ruta;}
     {extension} {strcpy(yylval.text, yytext); return extension;}
     {password}  {strcpy(yylval.text, yytext); return password; }
+    {directorio} {strcpy(yylval.text, yytext); return directorio;}
 
     [[:blank:]] {}
 

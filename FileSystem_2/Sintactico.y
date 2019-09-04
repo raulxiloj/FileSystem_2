@@ -100,6 +100,7 @@
 %token <text> fileRep
 %token <text> ls
 %token <text> password
+%token <text> directorio
 
 /*----------Not terminals------------*/
 %type <nodito> INIT
@@ -441,7 +442,7 @@ CHMOD: CHMOD PARAM_CHMOD {
                      };
 
 PARAM_CHMOD: path igual cadena { $$ = new Nodo("path",$3); }
-            | path igual ruta { $$ = new Nodo("path",$3); }
+            | path igual directorio { $$ = new Nodo("path",$3); }
             | ugo igual num { $$ = new Nodo("ugo",$3); }
             | r { $$ = new Nodo("r",""); };
 
