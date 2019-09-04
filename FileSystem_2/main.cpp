@@ -10,6 +10,9 @@
 extern int yyparse();
 extern Nodo *raiz; // Raiz del arbol
 
+/*
+ * Declaracion de metodos y funciones
+*/
 void imprimirEncabezado();
 void reconocerComando(Nodo*);
 void recorrerMKDISK(Nodo*);
@@ -19,6 +22,26 @@ void recorrerMOUNT(Nodo*);
 void recorrerUNMOUNT(Nodo*);
 void recorrerREP(Nodo*);
 void recorrerEXEC(Nodo*);
+void recorrerMKFS(Nodo*);
+void recorrerLOGIN(Nodo*);
+void recorrerMKGRP(Nodo*);
+void recorrerRMGRP(Nodo*);
+void recorrerMKUSR(Nodo*);
+void recorrerRMUSR(Nodo*);
+void recorrerCHMOD(Nodo*);
+void recorrerMKFILE(Nodo*);
+void recorrerCAT(Nodo*);
+void recorrerREM(Nodo*);
+void recorrerEDIT(Nodo*);
+void recorrerREN(Nodo*);
+void recorrerMKDIR(Nodo*);
+void recorrerCP(Nodo*);
+void recorrerMV(Nodo*);
+void recorrerFIND(Nodo*);
+void recorrerCHOWN(Nodo*);
+void recorrerCHGRP(Nodo*);
+void recorrerRECOVERY(Nodo*);
+void recorrerLOSS(Nodo*);
 void crearArchivo(QString);
 void crearParticionPrimaria(QString, QString, int, char, char, QString);
 void crearParticionExtendida(QString, QString, int, char, char, QString);
@@ -44,6 +67,7 @@ using namespace std;
 */
 enum Choice
 {
+    /*Fase 1*/
     MKDISK = 1,
     RMDISK = 2,
     FDISK = 3,
@@ -61,6 +85,7 @@ enum Choice
     NAME = 15,
     ADD = 16,
     ID = 17,
+    /*Fase 2*/
     MKFS = 18,
     LOGIN = 19,
     LOGOUT = 20,
@@ -211,7 +236,121 @@ void reconocerComando(Nodo *raiz)
         recorrerEXEC(raiz);
     }
         break;
-    default: printf("Error no se reconoce el comando");
+    /*---------------------------------COMANDOS FASE 2------------------------------*/
+    case MKFS:
+    {
+        Nodo n = raiz->hijos.at(0);
+        recorrerMKFS(&n);
+    }
+        break;
+    case LOGIN:
+    {
+        Nodo n = raiz->hijos.at(0);
+        recorrerLOGIN(&n);
+    }
+        break;
+    case LOGOUT:
+    {
+
+    }
+        break;
+    case MKGRP:
+    {
+        recorrerMKGRP(raiz);
+    }
+        break;
+    case RMGRP:
+    {
+        recorrerRMGRP(raiz);
+    }
+        break;
+    case MKUSR:
+    {
+        Nodo n = raiz->hijos.at(0);
+        recorrerMKUSR(&n);
+    }
+        break;
+    case RMUSR:
+    {
+        recorrerRMUSR(raiz);
+    }
+        break;
+    case CHMOD:
+    {
+
+    }
+        break;
+    case MKFILE:
+    {
+
+    }
+        break;
+    case CAT:
+    {
+
+    }
+        break;
+    case REM:
+    {
+
+    }
+        break;
+    case EDIT:
+    {
+
+    }
+        break;
+    case REN:
+    {
+
+    }
+        break;
+    case MKDIR:
+    {
+
+    }
+        break;
+    case CP:
+    {
+
+    }
+        break;
+    case MV:
+    {
+
+    }
+        break;
+    case FIND:
+    {
+
+    }
+        break;
+    case CHOWN:
+    {
+
+    }
+        break;
+    case CHGRP:
+    {
+
+    }
+        break;
+    case PAUSE:
+    {
+
+    }
+        break;
+    case RECOVERY:
+    {
+
+    }
+        break;
+    case LOSS:
+    {
+
+    }
+        break;
+    default: printf("ERROR no se reconoce el comando");
 
     }
 
@@ -2069,4 +2208,196 @@ QString getFileName(QString direccion){
     pos = aux.find(delimiter);
     res = aux.substr(0,pos);
     return QString::fromStdString(res);
+}
+
+/*
+ * --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ *                                                                               FASE 2
+ * --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ * Analisis semantico
+ * Metodos para recorrer el arbol que genera cada comando y
+ * obtener sus valores
+*/
+void recorrerMKFS(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagID = false;
+    bool flagType = false;
+    bool flagFS = false;
+    bool flag = false;//Si se repite un valor se activa esta bandera
+
+    for(int i = 0; raiz->hijos.count(); i++) {
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case ID:
+        {
+            if(flagID){
+                cout << "ERROR parametro -id ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagID = true;
+        }
+            break;
+        case TYPE:
+        {
+            if(flagType){
+                cout << "ERROR parametro -type ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagType = true;
+        }
+            break;
+        case FS:
+        {
+            if(flagFS){
+                cout << "ERROR parametro -fs ya definido " << endl;
+                flag = true;
+                break;
+            }
+            flagFS = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagID){//Parametro obligatorio
+
+        }else{
+
+        }
+    }
+}
+
+void recorrerLOGIN(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagUser = false;
+    bool flagPassword = false;
+    bool flagID = false;
+    bool flag = false;//Si se repite un valor se activa esta bandera
+
+    for(int i = 0; raiz->hijos.count(); i++) {
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case USER:
+        {
+            if(flagUser){
+                cout << "ERROR parametro -usr ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagUser = true;
+        }
+            break;
+        case PASSWORD:
+        {
+            if(flagPassword){
+                cout << "ERROR parametro -pwd ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPassword = true;
+        }
+            break;
+        case ID:
+        {
+            if(flagID){
+                cout << "ERROR parametro -id ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagID = true;
+
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagUser){
+            if(flagPassword){
+                if(flagID){
+
+                }else{
+                    cout << "ERROR parametro -id no definido" << endl;
+
+                }
+            }else{
+                cout << "ERROR parametro -pwd no definido" << endl;
+            }
+        }else{
+            cout << "ERROR parametro -usr no definido" << endl;
+        }
+    }
+}
+
+void recorrerMKGRP(Nodo *raiz){
+
+}
+
+void recorrerRMGRP(Nodo *raiz){
+
+}
+
+void recorrerMKUSR(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagUser = false;
+    bool flagPassword = false;
+    bool flagGroup = false;
+    bool flag = false;//Si se repite un valor se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case USER:
+        {
+            if(flagUser){
+                cout << "ERROR parametro -usr ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagUser = true;
+        }
+            break;
+        case PASSWORD:
+        {
+            if(flagPassword){
+                cout << "ERROR parametro -pwd ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPassword = true;
+        }
+            break;
+        case GROUP:
+        {
+            if(flagGroup){
+                cout << "ERROR parametro -grp ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagGroup = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagUser){
+            if(flagPassword){
+                if(flagGroup){
+
+                }else
+                    cout << "ERROR parametro -grp no definido" << endl;
+            }else
+                cout << "ERROR parametro -pwd no definido"<< endl;
+        }else
+            cout << "ERROR parametro -usr no definido " << endl;
+    }
+
+}
+
+void recorrerRMUSR(Nodo *raiz){
+
 }

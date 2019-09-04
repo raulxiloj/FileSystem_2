@@ -47,6 +47,6 @@ void Graficador::generarImagen(){
     fprintf(archivo, "%s",aux2);
     fclose(archivo);
     system("dot -Tjpg temp.dot -o AST.jpg");
-    //system("eog AST.jpg");
+    system("eog AST.jpg");
 }
 
