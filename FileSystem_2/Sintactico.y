@@ -376,6 +376,8 @@ LOGIN: LOGIN PARAM_LOGIN {
 
 PARAM_LOGIN: usr igual identificador { $$ = new Nodo("user", $3); }
             | usr igual cadena { $$ = new Nodo("user", $3); }
+            | pwd igual num { $$ = new Nodo("password",$3); }
+            | pwd igual identificador { $$ = new Nodo("password", $3); }
             | pwd igual password { $$ = new Nodo("password", $3); }
             | pwd igual cadena { $$ = new Nodo("password", $3); }
             | id igual identificador { $$ = new Nodo("id", $3); };
@@ -412,6 +414,8 @@ MKUSR: MKUSR PARAM_MKUSR {
 
 PARAM_MKUSR: usr igual identificador { $$ = new Nodo("user",$3); }
              | usr igual cadena { $$ = new Nodo("user",$3); }
+             | pwd igual num { $$ = new Nodo("password",$3); }
+             | pwd igual identificador { $$ = new Nodo("password", $3); }
              | pwd igual password { $$ = new Nodo("password", $3); }
              | pwd igual cadena { $$ = new Nodo("password",$3); }
              | grp igual identificador { $$ = new Nodo("group", $3); };
