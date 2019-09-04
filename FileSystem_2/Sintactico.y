@@ -350,7 +350,10 @@ SCRIPT: exec path igual cadena {
                                  $$->add(*n);
                                };
 
-MKFS: MKFS PARAM_MKFS { $$ = $1; }
+MKFS: MKFS PARAM_MKFS {
+                        $$ = $1;
+                        $$->add(*$2);
+                      }
       | PARAM_MKFS {
                       $$ = new Nodo("PARAMETRO", "");
                       $$->add(*$1);
@@ -362,7 +365,10 @@ PARAM_MKFS: id igual identificador { $$ = new Nodo("id",$3); }
             | fs igual fs2 { $$ = new Nodo("fs", "2fs"); }
             | fs igual fs3 { $$ = new Nodo("fs", "3fs"); };
 
-LOGIN: LOGIN PARAM_LOGIN { $$ = $1; }
+LOGIN: LOGIN PARAM_LOGIN {
+                           $$ = $1;
+                           $$->add(*$2);
+                         }
        | PARAM_LOGIN {
                         $$ = new Nodo("PARAMETRO","");
                         $$->add(*$1);
@@ -395,7 +401,10 @@ RMGRP: rmgrp name igual identificador {
                                     Nodo *n = new Nodo("name",$4);
                                     $$->add(*n);
                                  };
-MKUSR: MKUSR PARAM_MKUSR { $$ = $1; }
+MKUSR: MKUSR PARAM_MKUSR {
+                           $$ = $1;
+                           $$->add(*$2);
+                         }
        | PARAM_MKUSR {
                         $$ = new Nodo("PARAMETRO", "");
                         $$->add(*$1);
@@ -418,7 +427,10 @@ RMUSR: rmusr usr igual identificador {
                                   $$->add(*n);
                                };
 
-CHMOD: CHMOD PARAM_CHMOD { $$ = $1; }
+CHMOD: CHMOD PARAM_CHMOD {
+                          $$ = $1;
+                          $$->add(*$2);
+                         }
        | PARAM_CHMOD {
                        $$ = new Nodo("PARAMETRO","");
                        $$->add(*$1);
@@ -429,7 +441,10 @@ PARAM_CHMOD: path igual cadena { $$ = new Nodo("path",$3); }
             | ugo igual num { $$ = new Nodo("ugo",$3); }
             | r { $$ = new Nodo("r",""); };
 
-MKFILE: MKFILE PARAM_MKFILE { $$ = $1; }
+MKFILE: MKFILE PARAM_MKFILE {
+                              $$ = $1;
+                              $$->add(*$2);
+                            }
         | PARAM_MKFILE{
                         $$ = new Nodo("PARAMETRO","");
                         $$->add(*$1);
@@ -465,7 +480,10 @@ REM: rem path igual ruta{
                                $$->add(*n);
                             };
 
-EDIT: EDIT PARAM_EDIT { $$ = $1; }
+EDIT: EDIT PARAM_EDIT {
+                        $$ = $1;
+                        $$->add(*$2);
+                      }
       | PARAM_EDIT {
                      $$ = new Nodo("PARAMETRO","");
                      $$->add(*$1);
@@ -475,7 +493,10 @@ PARAM_EDIT: path igual ruta { $$ = new Nodo("path",$3); }
             | path igual cadena { $$ = new Nodo("path",$3); }
             | cont igual cadena { $$ = new Nodo("cont", $3); };
 
-REN: REN PARAM_REN { $$ = $1; }
+REN: REN PARAM_REN {
+                    $$ = $1;
+                    $$->add(*$2);
+                   }
      | PARAM_REN {
                    $$ = new Nodo("PARAMETRO","");
                    $$->add(*$1);
@@ -490,7 +511,10 @@ PARAM_REN: path igual ruta { $$ = new Nodo("path", $3); }
                                                 }
            | name igual cadena { $$ = new Nodo("name",$3); };
 
-MKDIR: MKDIR PARAM_MKDIR { $$ = $1; }
+MKDIR: MKDIR PARAM_MKDIR {
+                           $$ = $1;
+                           $$->add(*$2);
+                         }
        | PARAM_MKDIR{
                       $$ = new Nodo("PARAMETRO","");
                       $$->add(*$1);
@@ -501,7 +525,10 @@ PARAM_MKDIR: path igual ruta { $$ = new Nodo("path",$3); }
              | id igual identificador { $$ = new Nodo("id",$3);}
              | p { $$ = new Nodo("p",""); };
 
-CP: CP PARAM_CP{ $$ = $1; }
+CP: CP PARAM_CP{
+                 $$ = $1;
+                 $$->add(*$2);
+               }
     | PARAM_CP{
                 $$ = new Nodo("PARAMETRO","");
                 $$->add(*$1);
@@ -512,13 +539,19 @@ PARAM_CP: path igual ruta { $$ = new Nodo("path",$3); }
           | dest igual ruta { $$ = new Nodo("dest",$3); }
           | dest igual cadena { $$ = new Nodo("dest",$3); };
 
-MV: MV PARAM_CP { $$ = $1; }
+MV: MV PARAM_CP {
+                  $$ = $1;
+                  $$->add(*$2);
+                }
     | PARAM_CP{
                 $$ = new Nodo("PARAMETRO","");
                 $$->add(*$1);
               };
 
-FIND: FIND PARAM_FIND { $$ =$1; }
+FIND: FIND PARAM_FIND {
+                        $$ =$1;
+                        $$->add(*$2);
+                      }
       | PARAM_FIND {
                      $$ = new Nodo("PARAMETRO","");
                      $$->add(*$1);
@@ -533,7 +566,10 @@ PARAM_FIND: path igual ruta { $$ = new Nodo("path",$3); }
                                       }
             | name igual cadena { $$ = new Nodo("name",$3); };
 
-CHOWN: CHOWN PARAM_CHOWN { $$ = $1; }
+CHOWN: CHOWN PARAM_CHOWN {
+                           $$ = $1;
+                           $$->add(*$2);
+                         }
        | PARAM_CHOWN {
                        $$ = new Nodo("PARAMETRO","");
                        $$->add(*$1);
@@ -545,7 +581,10 @@ PARAM_CHOWN: path igual ruta { $$ = new Nodo("path",$3); }
              | usr igual cadena { $$ = new Nodo("user",$3); }
              | r { $$ = new Nodo("r",""); };
 
-CHGRP: CHGRP PARAM_CHGRP { $$ = $1; }
+CHGRP: CHGRP PARAM_CHGRP {
+                           $$ = $1;
+                           $$->add(*$2);
+                         }
        | PARAM_CHGRP{
                       $$ = new Nodo("PARAMETRO","");
                       $$->add(*$1);
