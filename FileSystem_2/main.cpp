@@ -128,8 +128,8 @@ enum Choice
 };
 
 /*
-    Structs necesarios para guardar la informacion de los discos
-    Los discos tendran informacion del MBR y el MBR tendra el espacio de las particiones
+ * Structs necesarios para guardar la informacion de los discos
+ * Los discos tendran informacion del MBR y el MBR tendra el espacio de las particiones
 */
 
 typedef struct {
@@ -277,12 +277,14 @@ void reconocerComando(Nodo *raiz)
         break;
     case CHMOD:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerCHMOD(&n);
     }
         break;
     case MKFILE:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerMKFILE(&n);
     }
         break;
     case CAT:
@@ -297,42 +299,50 @@ void reconocerComando(Nodo *raiz)
         break;
     case EDIT:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerEDIT(&n);
     }
         break;
     case REN:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerREN(&n);
     }
         break;
     case MKDIR:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerMKDIR(&n);
     }
         break;
     case CP:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerCP(&n);
     }
         break;
     case MV:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerMV(&n);
     }
         break;
     case FIND:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerFIND(&n);
     }
         break;
     case CHOWN:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerCHOWN(&n);
     }
         break;
     case CHGRP:
     {
-
+        Nodo n = raiz->hijos.at(0);
+        recorrerCHGRP(&n);
     }
         break;
     case PAUSE:
@@ -2264,9 +2274,8 @@ void recorrerMKFS(Nodo *raiz){
     if(!flag){
         if(flagID){//Parametro obligatorio
 
-        }else{
-
-        }
+        }else
+            cout << "ERROR parametro -id no definidp" << endl;
     }
 }
 
@@ -2400,4 +2409,473 @@ void recorrerMKUSR(Nodo *raiz){
 
 void recorrerRMUSR(Nodo *raiz){
 
+}
+
+void recorrerCHMOD(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagPath = false;
+    bool flagUgo = false;
+    bool flagR = false;
+    bool flag = false; //Si se repite un valor se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case UGO:
+        {
+            if(flagUgo){
+                cout << "ERRROR parametro -ugo ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagUgo = true;
+        }
+            break;
+        case R:
+        {
+            if(flagR){
+                cout << "ERROR parametro -r ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagR = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagUgo){
+
+            }else
+                cout << "ERROR parametro -ugo no definido" << endl;
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerMKFILE(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagPath = false;
+    bool flagP = false;
+    bool flagSize = false;
+    bool flagCont = false;
+    bool flag = false;//Si se repite un valor se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido"<< endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case P:
+        {
+            if(flagP){
+                cout << "ERROR parametro -p ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagP = true;
+        }
+            break;
+        case SIZE:
+        {
+            if(flagSize){
+                cout << "ERROR parametro -size ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagSize = true;
+        }
+            break;
+        case CONT:
+        {
+            if(flagCont){
+                cout << "ERROR parametro -cont ya definido " << endl;
+                flag = true;
+                break;
+            }
+            flagCont = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerEDIT(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro*/
+    bool flagPath = false;
+    bool flagCont = false;
+    bool flag = false; //Si se repite un valor se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case CONT:
+        {
+            if(flagCont){
+                cout << "ERROR parametro -cont ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagCont = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagCont){
+
+            }else
+                cout << "ERROR parametro -cont no definido" << endl;
+        }else
+            cout << "ERROR parametro -path no definido"<< endl;
+    }
+}
+
+void recorrerREN(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro*/
+    bool flagPath = false;
+    bool flagName = false;
+    bool flag = false;//Si se repite una bandera se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case NAME:
+        {
+            if(flagName){
+                cout << "ERROR parametro -name ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagName = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagName){
+
+            }else
+                cout << "ERROR parametro -name no definido" << endl;
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerMKDIR(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro*/
+    bool flagPath = false;
+    bool flagP = false;
+    bool flag = false; //Si se repite un parametro se activa esta bandera
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case P:
+        {
+            if(flagP){
+                cout << "ERROR parametro -p ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagP = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerCP(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro*/
+    bool flagPath = false;
+    bool flagDest = false;
+    bool flag = false; //Si se repite un parametro se activa
+
+    for(int i = 0; i < raiz->hijos.count(); i ++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case DEST:
+        {
+            if(flagDest){
+                cout << "ERROR parametro -dest ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagDest = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagDest){
+
+            }else
+                cout << "ERROR parametro -dest no definido "<< endl;
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerMV(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro*/
+    bool flagPath = false;
+    bool flagDest = false;
+    bool flag = false; //Si se repite un parametro se activa
+
+    for(int i = 0; i < raiz->hijos.count(); i ++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case DEST:
+        {
+            if(flagDest){
+                cout << "ERROR parametro -dest ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagDest = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagDest){
+
+            }else
+                cout << "ERROR parametro -dest no definido "<< endl;
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+}
+
+void recorrerFIND(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagPath = false;
+    bool flagName = false;
+    bool flag = false;
+
+    for(int i = 0; i < raiz->hijos.count(); i++){
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout << "ERROR parametro -path ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case NAME:
+        {
+            if(flagName){
+                cout << "ERRRO parametro -name ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagName = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagName){
+
+            }else
+                cout <<"ERROR parametro -name no definido" << endl;
+        }else
+            cout << "ERROR parametro -path no definido " << endl;
+    }
+}
+
+void recorrerCHOWN(Nodo *raiz){
+    /*Banderas para verificar cuando venga un parametro y si se repite*/
+    bool flagPath = false;
+    bool flagR = false;
+    bool flagUser = false;
+    bool flag = false;
+
+    for (int i = 0; i < raiz->hijos.count(); i++) {
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case PATH:
+        {
+            if(flagPath){
+                cout <<"ERRRO parametro -path ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagPath = true;
+        }
+            break;
+        case R:
+        {
+            if(flagR){
+                cout <<"ERRRO parametro -r ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagR= true;
+        }
+            break;
+        case USER:
+        {
+            if(flagUser){
+                cout <<"ERRRO parametro -user ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagUser = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagPath){
+            if(flagUser){
+
+            }else
+                cout << "ERROR parametro -usr no definido" << endl;
+        }else
+            cout << "ERROR parametro -path no definido" << endl;
+    }
+
+}
+
+void recorrerCHGRP(Nodo *raiz){
+    /*Banderas para verificar cuando un parametro venga y si se repite*/
+    bool flagUser = false;
+    bool flagGroup = false;
+    bool flag = false;
+
+    for (int i = 0; i < raiz->hijos.count(); i++) {
+        Nodo n = raiz->hijos.at(i);
+        switch (n.tipo_) {
+        case USER:
+        {
+            if(flagUser){
+                cout << "ERROR parametro -usr ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagUser = true;
+        }
+            break;
+        case GROUP:
+        {
+            if(flagGroup){
+                cout << "ERROR parametro -grp ya definido "<< endl;
+                flag = true;
+                break;
+            }
+            flagGroup = true;
+        }
+            break;
+        }
+    }
+
+    if(!flag){
+        if(flagUser){
+            if(flagGroup){
+
+            }else
+                cout << "ERROR parametro -grp no definido" << endl;
+        }else
+            cout << "ERROR parametro -usr no definido" << endl;
+    }
 }

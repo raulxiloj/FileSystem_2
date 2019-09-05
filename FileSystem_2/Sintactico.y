@@ -525,7 +525,7 @@ MKDIR: MKDIR PARAM_MKDIR {
                       $$->add(*$1);
                     };
 
-PARAM_MKDIR: path igual ruta { $$ = new Nodo("path",$3); }
+PARAM_MKDIR: path igual directorio { $$ = new Nodo("path",$3); }
              | path igual cadena { $$ = new Nodo("path",$3); }
              | id igual identificador { $$ = new Nodo("id",$3);}
              | p { $$ = new Nodo("p",""); };
@@ -541,8 +541,10 @@ CP: CP PARAM_CP{
 
 PARAM_CP: path igual ruta { $$ = new Nodo("path",$3); }
           | path igual cadena { $$ = new Nodo("path",$3); }
+          | path igual directorio { $$ = new Nodo("path",$3); }
           | dest igual ruta { $$ = new Nodo("dest",$3); }
-          | dest igual cadena { $$ = new Nodo("dest",$3); };
+          | dest igual cadena { $$ = new Nodo("dest",$3); }
+          | dest igual directorio { $$ = new Nodo("dest",$3); };
 
 MV: MV PARAM_CP {
                   $$ = $1;
@@ -564,11 +566,16 @@ FIND: FIND PARAM_FIND {
 
 PARAM_FIND: path igual ruta { $$ = new Nodo("path",$3); }
             | path igual cadena { $$ = new Nodo("path",$3); }
-            | name igual id extension {
-                                        $$ = new Nodo("name","");
-                                        Nodo *n = new Nodo($3,$4);
-                                        $$->add(*n);
-                                      }
+            | name igual identificador extension {
+                                                   $$ = new Nodo("name","");
+                                                   Nodo *n = new Nodo($3,$4);
+                                                   $$->add(*n);
+                                                 }
+            | name igual caracter extension {
+                                              $$ = new Nodo("name","");
+                                              Nodo *n = new Nodo($3,$4);
+                                              $$->add(*n);
+                                            }
             | name igual cadena { $$ = new Nodo("name",$3); };
 
 CHOWN: CHOWN PARAM_CHOWN {
@@ -582,6 +589,7 @@ CHOWN: CHOWN PARAM_CHOWN {
 
 PARAM_CHOWN: path igual ruta { $$ = new Nodo("path",$3); }
              | path igual cadena { $$ = new Nodo("path", $3); }
+             | path igual directorio { $$ = new Nodo("path",$3); }
              | usr igual identificador { $$ = new Nodo("user",$3); }
              | usr igual cadena { $$ = new Nodo("user",$3); }
              | r { $$ = new Nodo("r",""); };
