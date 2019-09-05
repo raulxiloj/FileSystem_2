@@ -17,9 +17,28 @@ No distinguira entre mayúsculas y minúsculas. Solo se puede colocar un comando
   - REP: Generara un reporte tipo imagen
   - EXEC: Ejecutara un archivo con comandos ya escritos. 
 * FASE 2
-  - MKFS
-  - Login
-  - Logout
+  - mkfs
+  - login
+  - logout
+  - mkgrp
+  - rmgrp
+  - mkusr
+  - rmusr
+  - chmod
+  - mkfile
+  - cat
+  - rem
+  - edit 
+  - ren 
+  - mkdir
+  - cp
+  - mv
+  - find
+  - chown
+  - chgrp
+  - pause
+  - recovery
+  - loss 
 
 ## Herramientas utilizadas:
 - C/C++ (Lenguaje de programacion) 
