@@ -19,6 +19,7 @@ public:
     int eliminarNodo(QString);
     bool buscarNodo(QString, QString);
     QString getDireccion(QString);
+    NodoMount* getNodo(QString);
 };
 
 #endif // LISTAMOUNT_H

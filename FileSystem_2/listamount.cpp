@@ -88,23 +88,6 @@ int ListaMount::buscarNumero(QString direccion, QString nombre){
     return retorno;
 }
 
-/* Funcion que duelve la ruta de una particion
- * @param id = identificador de la particion
- * @return ruta = si lo encontro | "null" si no la encontro
-*/
-QString ListaMount::getDireccion(QString id){
-    NodoMount *aux = primero;
-    while(aux!=nullptr){
-        QString tempID = "vd";
-        tempID += aux->letra + QString::number(aux->num);
-        if(id == tempID){
-            return aux->direccion;
-        }
-        aux = aux->siguiente;
-    }
-    return "null";
-}
-
 /* Funcion que retorna un booleano para verificar si existe un nodo
  * @param QString direccion: direccion del disco
  * @param QString nombre: nombre de la particion
@@ -119,6 +102,23 @@ bool ListaMount::buscarNodo(QString direccion, QString nombre){
         aux = aux->siguiente;
     }
     return false;
+}
+
+/* Funcion que retorna un nodo de la lista para verificar si una particion esta montada
+ * @param QString id: identificador de la particion
+ * @return aux = si lo encontro | nullptr = no lo encuentra
+*/
+NodoMount* ListaMount::getNodo(QString id){
+    NodoMount *aux = primero;
+    while(aux!=nullptr){
+        QString tempID = "vd";
+        tempID += aux->letra + QString::number(aux->num);
+        if(id == tempID){
+            return aux;
+        }
+        aux = aux->siguiente;
+    }
+    return nullptr;
 }
 
 /* Metodo para desplegar las particiones montadas
