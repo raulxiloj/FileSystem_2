@@ -49,7 +49,6 @@ void crearParticionLogica(QString, QString, int, char, char, QString) ;
 void eliminarParticion(QString, QString, QString, QString);
 void agregarQuitarParticion(QString, QString ,int ,char,QString);
 QString getDirectorio(QString);
-QString getDireccion(QString);
 bool existeParticion(QString, QString);
 int buscarParticion_P_E(QString, QString);
 int buscarParticion_L(QString, QString);
@@ -213,7 +212,7 @@ typedef struct{
 
 /*Variables globales*/
 ListaMount *lista = new ListaMount();
-bool static flag_global = true;
+bool flag_global = true;
 
 /*
     FUNCION PRINCIPAL
@@ -1008,18 +1007,18 @@ void recorrerREP(Nodo *raiz)
         if(flagPath){
             if(flagName){
                 if(flagID){
-                    QString direccion = lista->getDireccion(valID);
+                    NodoMount *aux = lista->getNodo(valID);
                     QString ext = getExtension(valPath);
-                    if(direccion != "null"){
+                    if(aux !=  nullptr){
                         QString directorio = getDirectorio(valPath);
                         string comando = "sudo mkdir -p \'"+directorio.toStdString()+"\'";
                         system(comando.c_str());
                         string comando2 = "sudo chmod -R 777 \'"+directorio.toStdString()+"\'";
                         system(comando2.c_str());
                         if(valName == "mbr"){
-                            graficarMBR(direccion,valPath,ext);
+                            graficarMBR(aux->direccion,valPath,ext);
                         }else{
-                            graficarDisco(direccion,valPath,ext);
+                            graficarDisco(aux->direccion,valPath,ext);
                         }
                     }else{
                         cout << "ERROR no se encuentra la particion" << endl;
