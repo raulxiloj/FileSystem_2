@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <fstream>
+#include <math.h>
 
 #include "scanner.h"
 #include "parser.h"
@@ -57,6 +58,9 @@ void graficarMBR(QString, QString, QString);
 void graficarDisco(QString, QString, QString);
 QString getExtension(QString);
 QString getFileName(QString);
+
+void formatearEXT2(int,int,QString);
+void formatearEXT3(int,int,QString);
 
 using namespace std;
 
@@ -185,12 +189,12 @@ typedef struct{
     int i_uid; //UID del usuario propiertario del archivo/carpeta
     int i_gid; //GID del grupo al que pertenece el archivo/carpeta
     int i_size; //Tamano del archivo en bytes
-    int i_atime; //Ultima fecha en que se leyo el inodo sin modificarlo
-    int i_ctime; //Fecha en que se creo el el inodo
-    int i_mtime; //Ultima fecha en la que se modifco
     int i_block[15]; //Array de bloques
     int i_type; //Indica si es archivo o carpeta
     int i_perm; //Guarada los permisos del archivo/carpeta
+    time_t i_atime; //Ultima fecha en que se leyo el inodo sin modificarlo
+    time_t i_ctime; //Fecha en que se creo el el inodo
+    time_t i_mtime; //Ultima fecha en la que se modifco
 }InodoTable;
 
 typedef struct{
@@ -2277,8 +2281,7 @@ QString getFileName(QString direccion){
  *                                                                               FASE 2
  * --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  * Analisis semantico
- * Metodos para recorrer el arbol que genera cada comando y
- * obtener sus valores
+ * Metodos para recorrer el arbol que genera cada comando y obtener sus valores
 */
 void recorrerMKFS(Nodo *raiz){
     /*Banderas para verificar cuando venga un parametro y si se repite*/
@@ -2286,8 +2289,13 @@ void recorrerMKFS(Nodo *raiz){
     bool flagType = false;
     bool flagFS = false;
     bool flag = false;//Si se repite un valor se activa esta bandera
+    /*Variables para obtener los valores de cada nodo*/
+    QString id = "";
+    QString type = "";
+    int fs = 2;
 
-    for(int i = 0; raiz->hijos.count(); i++) {
+    for(int i = 0; i < raiz->hijos.count(); i++)
+    {
         Nodo n = raiz->hijos.at(i);
         switch (n.tipo_) {
         case ID:
@@ -2298,6 +2306,7 @@ void recorrerMKFS(Nodo *raiz){
                 break;
             }
             flagID = true;
+            id = n.valor;
         }
             break;
         case TYPE:
@@ -2308,6 +2317,7 @@ void recorrerMKFS(Nodo *raiz){
                 break;
             }
             flagType = true;
+            type = n.valor;
         }
             break;
         case FS:
@@ -2318,6 +2328,10 @@ void recorrerMKFS(Nodo *raiz){
                 break;
             }
             flagFS = true;
+            if(n.valor == "3fs")
+                fs = 3;
+            else
+                fs = 2;
         }
             break;
         }
@@ -2325,7 +2339,24 @@ void recorrerMKFS(Nodo *raiz){
 
     if(!flag){
         if(flagID){//Parametro obligatorio
-
+            NodoMount *aux = lista->getNodo(id);
+            if(aux!=nullptr){
+                int index = buscarParticion_P_E(aux->direccion,aux->nombre);
+                if(index != -1){
+                    MBR masterboot;
+                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                    fread(&masterboot,sizeof(MBR),1,fp);
+                    int inicio = masterboot.mbr_partition[index].part_start;
+                    int tamano = masterboot.mbr_partition[index].part_size;
+                    if(fs == 3)
+                        formatearEXT3(inicio,tamano,aux->direccion);
+                    else
+                        formatearEXT2(inicio,tamano,aux->direccion);
+                    fclose(fp);
+                }else{
+                    index = buscarParticion_L(aux->direccion,aux->nombre);
+                }
+            }
         }else
             cout << "ERROR parametro -id no definidp" << endl;
     }
@@ -2338,7 +2369,7 @@ void recorrerLOGIN(Nodo *raiz){
     bool flagID = false;
     bool flag = false;//Si se repite un valor se activa esta bandera
 
-    for(int i = 0; raiz->hijos.count(); i++) {
+    for(int i = 0; i < raiz->hijos.count(); i++) {
         Nodo n = raiz->hijos.at(i);
         switch (n.tipo_) {
         case USER:
@@ -2930,4 +2961,115 @@ void recorrerCHGRP(Nodo *raiz){
         }else
             cout << "ERROR parametro -usr no definido" << endl;
     }
+}
+
+void formatearEXT2(int inicio, int tamano, QString direccion){
+    double n = (tamano - static_cast<int>(sizeof(SuperBloque)))/(4 + static_cast<int>(sizeof(InodoTable)) +3*static_cast<int>(sizeof(BloqueArchivo)));
+    int num_estructuras = static_cast<int>(floor(n));//Numero de inodos
+    int num_bloques = 3*num_estructuras;
+
+    SuperBloque super;
+    super.s_filesystem_type = 2;
+    super.s_inodes_count = num_estructuras;
+    super.s_blocks_count = num_bloques;
+    super.s_free_blocks_count = num_bloques -2;//---
+    super.s_free_inodes_count = num_estructuras -2;//---
+    super.s_mtime = time(nullptr);
+    super.s_umtime = 0;
+    super.s_mnt_count = 0;
+    super.s_magic = 0xEF53;
+    super.s_inode_size = sizeof(InodoTable);
+    super.s_block_size = sizeof(BloqueArchivo);
+    super.s_first_ino = 2;
+    super.s_first_blo = 2;
+    super.s_bm_inode_start = inicio + static_cast<int>(sizeof(SuperBloque));
+    super.s_bm_block_start = inicio + static_cast<int>(sizeof(SuperBloque)) + num_estructuras;
+    super.s_inode_start = inicio + static_cast<int>(sizeof (SuperBloque)) + num_estructuras + num_bloques;
+    super.s_block_start = inicio + static_cast<int>(sizeof(SuperBloque)) + num_estructuras + num_bloques + static_cast<int>(static_cast<int>(sizeof(InodoTable))*num_estructuras);
+
+    InodoTable inodo;
+    BloqueCarpeta bloque;
+
+    FILE *fp;
+    char buffer = '0';
+    char buffer2 = '1';
+    if((fp = fopen(direccion.toStdString().c_str(),"rb+"))){
+        /*-------------SUPERBLOQUE----------------*/
+        fseek(fp,inicio,SEEK_SET);
+        fwrite(&super,sizeof(SuperBloque),1,fp);
+        /*-----------BITMAP DE INODOS-------------*/
+        for(int i = 0; i < num_estructuras; i++){
+            fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
+            fwrite(&buffer,sizeof(char),1,fp);
+        }
+        /*---------inodos para / y users.txt------*/
+        fseek(fp,super.s_bm_inode_start,SEEK_SET);
+        fwrite(&buffer2,sizeof(char),1,fp);
+        fwrite(&buffer2,sizeof(char),1,fp);
+        /*----------BITMAP DE BLOQUES-------------*/
+        for(int i = 0; i < num_bloques; i++){
+            fseek(fp,super.s_bm_block_start + i,SEEK_SET);
+            fwrite(&buffer,sizeof(char),1,fp);
+        }
+        /*-----Bloques para / y para users.txt----*/
+        fseek(fp,super.s_bm_block_start,SEEK_SET);
+        fwrite(&buffer2,sizeof(char),1,fp);
+        fwrite(&buffer2,sizeof(char),1,fp);
+        /*--------inodo para carpeta root---------*/
+        inodo.i_uid = 1;
+        inodo.i_gid = 1;
+        inodo.i_size = 0;
+        inodo.i_atime = time(nullptr);
+        inodo.i_ctime = time(nullptr);
+        inodo.i_mtime = time(nullptr);
+        inodo.i_block[0] = 0;
+        for(int i = 1; i < 15;i++){
+            inodo.i_block[i] = -1;
+        }
+        inodo.i_type = '0';
+        inodo.i_perm = 664;
+        fseek(fp,super.s_inode_start,SEEK_SET);
+        fwrite(&inodo,sizeof(InodoTable),1,fp);
+        /*-------Bloque para carpeta root-------*/
+        strcpy(bloque.b_content[0].b_name,".");//Padre
+        bloque.b_content[0].b_inodo=0;
+
+        strcpy(bloque.b_content[1].b_name,"..");//Actual
+        bloque.b_content[1].b_inodo=0;
+
+        strcpy(bloque.b_content[2].b_name,"users.txt");
+        bloque.b_content[2].b_inodo=1;
+
+        strcpy(bloque.b_content[3].b_name,".");
+        bloque.b_content[3].b_inodo=-1;
+        fseek(fp,super.s_block_start,SEEK_SET);
+        fwrite(&bloque,sizeof(BloqueCarpeta),1,fp);
+        /*--------inodo para users.txt----------*/
+        inodo.i_uid = 1;
+        inodo.i_gid = 1;
+        inodo.i_size = 27;
+        inodo.i_atime = time(nullptr);
+        inodo.i_ctime = time(nullptr);
+        inodo.i_mtime = time(nullptr);
+        inodo.i_block[0] = 1;
+        for(int i = 1; i < 15;i++){
+            inodo.i_block[i] = -1;
+        }
+        inodo.i_type = '1';
+        inodo.i_perm = 755;
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        fwrite(&inodo,sizeof(InodoTable),1,fp);
+        /*--------Bloque para users.txt---------*/
+        BloqueArchivo archivo;
+        memset(archivo.b_content,0,sizeof(archivo.b_content));
+        strcpy(archivo.b_content,"1,G,root\n1,U,root,root,123\n");
+        fseek(fp,super.s_bm_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
+        fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+
+        fclose(fp);
+    }
+}
+
+void formatearEXT3(int inicio, int tamano, QString direccion){
+
 }
