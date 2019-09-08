@@ -61,6 +61,9 @@ QString getFileName(QString);
 
 void formatearEXT2(int,int,QString);
 void formatearEXT3(int,int,QString);
+int log_in(QString, QString, QString, QString);
+int buscarUsuario(int,int,QString,QString,QString);
+void log_out();
 
 using namespace std;
 
@@ -224,10 +227,19 @@ typedef struct{
     int journal_permissions;
 }Journal;
 
+typedef struct{
+    int id;
+    int id_grp;
+    char username[12];
+    char password[12];
+    char group[12];
+}LoggedUser;
+
 /*Variables globales*/
 ListaMount *lista = new ListaMount();
+LoggedUser currentUser;
 bool flag_global = true;
-
+bool flag_login = false;
 /*
     FUNCION PRINCIPAL
 */
@@ -317,7 +329,7 @@ void reconocerComando(Nodo *raiz)
         break;
     case LOGOUT:
     {
-
+        log_out();
     }
         break;
     case MKGRP:
@@ -2366,7 +2378,8 @@ void recorrerMKFS(Nodo *raiz){
                 }else{
                     index = buscarParticion_L(aux->direccion,aux->nombre);
                 }
-            }
+            }else
+                cout << "ERROR no se encuentra ninguna particion montada con ese id" << endl;
         }else
             cout << "ERROR parametro -id no definidp" << endl;
     }
@@ -2377,7 +2390,11 @@ void recorrerLOGIN(Nodo *raiz){
     bool flagUser = false;
     bool flagPassword = false;
     bool flagID = false;
-    bool flag = false;//Si se repite un valor se activa esta bandera
+    bool flag = false;
+    /*Variables para obtener los valores de cada nodo*/
+    QString user = "";
+    QString password = "";
+    QString id = "";
 
     for(int i = 0; i < raiz->hijos.count(); i++) {
         Nodo n = raiz->hijos.at(i);
@@ -2390,6 +2407,7 @@ void recorrerLOGIN(Nodo *raiz){
                 break;
             }
             flagUser = true;
+            user = n.valor;
         }
             break;
         case PASSWORD:
@@ -2400,6 +2418,7 @@ void recorrerLOGIN(Nodo *raiz){
                 break;
             }
             flagPassword = true;
+            password = n.valor;
         }
             break;
         case ID:
@@ -2410,7 +2429,7 @@ void recorrerLOGIN(Nodo *raiz){
                 break;
             }
             flagID = true;
-
+            id = n.valor;
         }
             break;
         }
@@ -2420,17 +2439,27 @@ void recorrerLOGIN(Nodo *raiz){
         if(flagUser){
             if(flagPassword){
                 if(flagID){
-
-                }else{
+                    if(!flag_login){
+                        NodoMount *aux = lista->getNodo(id);
+                        if(aux != nullptr){
+                            int res = log_in(aux->direccion,aux->nombre,user,password);
+                            if(res == 1){
+                                flag_login = true;
+                                cout << "Sesion iniciada con exito" << endl;
+                            }else if(res == 2)
+                                cout << "ERROR Contrasena incorrecta" << endl;
+                            else if(res == 0)
+                                cout << "ERROR Usuario no encontrado" << endl;
+                        }else
+                            cout << "ERROR no se encuentra ninguna particion montada con ese id " << endl;
+                    }else
+                        cout << "ERROR sesion activa, cierre sesion para poder volver a iniciar sesion" << endl;
+                }else
                     cout << "ERROR parametro -id no definido" << endl;
-
-                }
-            }else{
+            }else
                 cout << "ERROR parametro -pwd no definido" << endl;
-            }
-        }else{
+        }else
             cout << "ERROR parametro -usr no definido" << endl;
-        }
     }
 }
 
@@ -2973,6 +3002,11 @@ void recorrerCHGRP(Nodo *raiz){
     }
 }
 
+/* Metodo encargado de formatear una particion con formato EXT2
+ * @param int inicio: Byte donde inicia la particion en el disco
+ * @param int tamano: Tamano de la particion
+ * @param QString direccion: ruta del disco
+*/
 void formatearEXT2(int inicio, int tamano, QString direccion){
     double n = (tamano - static_cast<int>(sizeof(SuperBloque)))/(4 + static_cast<int>(sizeof(InodoTable)) +3*static_cast<int>(sizeof(BloqueArchivo)));
     int num_estructuras = static_cast<int>(floor(n));//Numero de inodos
@@ -2982,8 +3016,8 @@ void formatearEXT2(int inicio, int tamano, QString direccion){
     super.s_filesystem_type = 2;
     super.s_inodes_count = num_estructuras;
     super.s_blocks_count = num_bloques;
-    super.s_free_blocks_count = num_bloques -2;//---
-    super.s_free_inodes_count = num_estructuras -2;//---
+    super.s_free_blocks_count = num_bloques -2;
+    super.s_free_inodes_count = num_estructuras -2;
     super.s_mtime = time(nullptr);
     super.s_umtime = 0;
     super.s_mnt_count = 0;
@@ -2995,91 +3029,100 @@ void formatearEXT2(int inicio, int tamano, QString direccion){
     super.s_bm_inode_start = inicio + static_cast<int>(sizeof(SuperBloque));
     super.s_bm_block_start = inicio + static_cast<int>(sizeof(SuperBloque)) + num_estructuras;
     super.s_inode_start = inicio + static_cast<int>(sizeof (SuperBloque)) + num_estructuras + num_bloques;
-    super.s_block_start = inicio + static_cast<int>(sizeof(SuperBloque)) + num_estructuras + num_bloques + static_cast<int>(static_cast<int>(sizeof(InodoTable))*num_estructuras);
+    super.s_block_start = inicio + static_cast<int>(sizeof(SuperBloque)) + num_estructuras + num_bloques + (static_cast<int>(sizeof(InodoTable))*num_estructuras);
 
     InodoTable inodo;
     BloqueCarpeta bloque;
 
-    FILE *fp;
     char buffer = '0';
     char buffer2 = '1';
-    if((fp = fopen(direccion.toStdString().c_str(),"rb+"))){
-        /*-------------SUPERBLOQUE----------------*/
-        fseek(fp,inicio,SEEK_SET);
-        fwrite(&super,sizeof(SuperBloque),1,fp);
-        /*-----------BITMAP DE INODOS-------------*/
-        for(int i = 0; i < num_estructuras; i++){
-            fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
-            fwrite(&buffer,sizeof(char),1,fp);
-        }
-        /*---------inodos para / y users.txt------*/
-        fseek(fp,super.s_bm_inode_start,SEEK_SET);
-        fwrite(&buffer2,sizeof(char),1,fp);
-        fwrite(&buffer2,sizeof(char),1,fp);
-        /*----------BITMAP DE BLOQUES-------------*/
-        for(int i = 0; i < num_bloques; i++){
-            fseek(fp,super.s_bm_block_start + i,SEEK_SET);
-            fwrite(&buffer,sizeof(char),1,fp);
-        }
-        /*-----Bloques para / y para users.txt----*/
-        fseek(fp,super.s_bm_block_start,SEEK_SET);
-        fwrite(&buffer2,sizeof(char),1,fp);
-        fwrite(&buffer2,sizeof(char),1,fp);
-        /*--------inodo para carpeta root---------*/
-        inodo.i_uid = 1;
-        inodo.i_gid = 1;
-        inodo.i_size = 0;
-        inodo.i_atime = time(nullptr);
-        inodo.i_ctime = time(nullptr);
-        inodo.i_mtime = time(nullptr);
-        inodo.i_block[0] = 0;
-        for(int i = 1; i < 15;i++){
-            inodo.i_block[i] = -1;
-        }
-        inodo.i_type = '0';
-        inodo.i_perm = 664;
-        fseek(fp,super.s_inode_start,SEEK_SET);
-        fwrite(&inodo,sizeof(InodoTable),1,fp);
-        /*-------Bloque para carpeta root-------*/
-        strcpy(bloque.b_content[0].b_name,".");//Padre
-        bloque.b_content[0].b_inodo=0;
 
-        strcpy(bloque.b_content[1].b_name,"..");//Actual
-        bloque.b_content[1].b_inodo=0;
+    FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
 
-        strcpy(bloque.b_content[2].b_name,"users.txt");
-        bloque.b_content[2].b_inodo=1;
-
-        strcpy(bloque.b_content[3].b_name,".");
-        bloque.b_content[3].b_inodo=-1;
-        fseek(fp,super.s_block_start,SEEK_SET);
-        fwrite(&bloque,sizeof(BloqueCarpeta),1,fp);
-        /*--------inodo para users.txt----------*/
-        inodo.i_uid = 1;
-        inodo.i_gid = 1;
-        inodo.i_size = 27;
-        inodo.i_atime = time(nullptr);
-        inodo.i_ctime = time(nullptr);
-        inodo.i_mtime = time(nullptr);
-        inodo.i_block[0] = 1;
-        for(int i = 1; i < 15;i++){
-            inodo.i_block[i] = -1;
-        }
-        inodo.i_type = '1';
-        inodo.i_perm = 755;
-        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
-        fwrite(&inodo,sizeof(InodoTable),1,fp);
-        /*--------Bloque para users.txt---------*/
-        BloqueArchivo archivo;
-        memset(archivo.b_content,0,sizeof(archivo.b_content));
-        strcpy(archivo.b_content,"1,G,root\n1,U,root,root,123\n");
-        fseek(fp,super.s_bm_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
-        fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
-
-        fclose(fp);
+    /*-------------------SUPERBLOQUE------------------*/
+    fseek(fp,inicio,SEEK_SET);
+    fwrite(&super,sizeof(SuperBloque),1,fp);
+    /*----------------BITMAP DE INODOS----------------*/
+    for(int i = 0; i < num_estructuras; i++){
+        fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
+        fwrite(&buffer,sizeof(char),1,fp);
     }
+    /*----------bit para / y users.txt en BM----------*/
+    fseek(fp,super.s_bm_inode_start,SEEK_SET);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    /*---------------BITMAP DE BLOQUES----------------*/
+    for(int i = 0; i < num_bloques; i++){
+        fseek(fp,super.s_bm_block_start + i,SEEK_SET);
+        fwrite(&buffer,sizeof(char),1,fp);
+    }
+    /*----------bit para / y users.txt en BM----------*/
+    fseek(fp,super.s_bm_block_start,SEEK_SET);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    /*------------inodo para carpeta root-------------*/
+    inodo.i_uid = 1;
+    inodo.i_gid = 1;
+    inodo.i_size = 0;
+    inodo.i_atime = time(nullptr);
+    inodo.i_ctime = time(nullptr);
+    inodo.i_mtime = time(nullptr);
+    inodo.i_block[0] = 0;
+    for(int i = 1; i < 15;i++){
+        inodo.i_block[i] = -1;
+    }
+    inodo.i_type = '0';
+    inodo.i_perm = 664;
+    fseek(fp,super.s_inode_start,SEEK_SET);
+    fwrite(&inodo,sizeof(InodoTable),1,fp);
+    /*------------Bloque para carpeta root------------*/
+    strcpy(bloque.b_content[0].b_name,".");//Actual (el mismo)
+    bloque.b_content[0].b_inodo=0;
+
+    strcpy(bloque.b_content[1].b_name,"..");//Padre
+    bloque.b_content[1].b_inodo=0;
+
+    strcpy(bloque.b_content[2].b_name,"users.txt");
+    bloque.b_content[2].b_inodo=1;
+
+    strcpy(bloque.b_content[3].b_name,".");
+    bloque.b_content[3].b_inodo=-1;
+    fseek(fp,super.s_block_start,SEEK_SET);
+    fwrite(&bloque,sizeof(BloqueCarpeta),1,fp);
+    /*-------------inodo para users.txt-------------*/
+    inodo.i_uid = 1;
+    inodo.i_gid = 1;
+    inodo.i_size = 27;
+    inodo.i_atime = time(nullptr);
+    inodo.i_ctime = time(nullptr);
+    inodo.i_mtime = time(nullptr);
+    inodo.i_block[0] = 1;
+    for(int i = 1; i < 15;i++){
+        inodo.i_block[i] = -1;
+    }
+    inodo.i_type = '1';
+    inodo.i_perm = 755;
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+    fwrite(&inodo,sizeof(InodoTable),1,fp);
+    /*-------------Bloque para users.txt------------*/
+    BloqueArchivo archivo;
+    memset(archivo.b_content,0,sizeof(archivo.b_content));
+    strcpy(archivo.b_content,"1,G,root\n1,U,root,root,123\n");
+    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
+    fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+
+    cout << "EXT2" << endl;
+    cout << "..." << endl;
+    cout << "Disco formateado con exito" << endl;
+
+    fclose(fp);
 }
 
+/* Metodo encargado de formatear una particion con formato EXT3
+ * @param int inicio: Byte donde inicia la particion en el disco
+ * @param int tamano: Tamano de la particion
+ * @param QString direccion: ruta del disco
+*/
 void formatearEXT3(int inicio, int tamano, QString direccion){
     double n = (tamano - static_cast<int>(sizeof(SuperBloque)))/(4 + static_cast<int>(sizeof(InodoTable)) +3*static_cast<int>(sizeof(BloqueArchivo)));
     int num_estructuras = static_cast<int>(floor(n));//Bitmap indos
@@ -3091,8 +3134,8 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     super.s_filesystem_type = 3;
     super.s_inodes_count = num_estructuras;
     super.s_blocks_count = num_bloques;
-    super.s_free_blocks_count = num_bloques - 2;//---
-    super.s_free_inodes_count = num_estructuras - 2;//---
+    super.s_free_blocks_count = num_bloques - 2;
+    super.s_free_inodes_count = num_estructuras - 2;
     super.s_mtime = time(nullptr);
     super.s_umtime = 0;
     super.s_mnt_count = 0;
@@ -3113,24 +3156,29 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     char buffer2 = '1';
 
     FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
-    /*-------------SUPERBLOQUE----------------*/
+
+    /*-------------------SUPERBLOQUE------------------*/
     fseek(fp,inicio,SEEK_SET);
     fwrite(&super,sizeof(SuperBloque),1,fp);
-    /*-----------BITMAP DE INODOS-------------*/
+    /*----------------BITMAP DE INODOS----------------*/
     for(int i = 0; i < num_estructuras; i++){
         fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
         fwrite(&buffer,sizeof(char),1,fp);
     }
-    /*---------inodos para / y users.txt------*/
+    /*----------bit para / y users.txt en BM----------*/
     fseek(fp,super.s_bm_inode_start,SEEK_SET);
     fwrite(&buffer2,sizeof(char),1,fp);
     fwrite(&buffer2,sizeof(char),1,fp);
-    /*----------BITMAP DE BLOQUES-------------*/
+    /*---------------BITMAP DE BLOQUES----------------*/
     for(int i = 0; i < num_bloques; i++){
         fseek(fp,super.s_bm_block_start + i,SEEK_SET);
         fwrite(&buffer,sizeof(char),1,fp);
     }
-    /*--------inodo para carpeta root---------*/
+    /*----------bit para / y users.txt en BM----------*/
+    fseek(fp,super.s_bm_block_start,SEEK_SET);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    fwrite(&buffer2,sizeof(char),1,fp);
+    /*------------inodo para carpeta root-------------*/
     inodo.i_uid = 1;
     inodo.i_gid = 1;
     inodo.i_size = 0;
@@ -3145,11 +3193,11 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     inodo.i_perm = 664;
     fseek(fp,super.s_inode_start,SEEK_SET);
     fwrite(&inodo,sizeof(InodoTable),1,fp);
-    /*-------Bloque para carpeta root-------*/
-    strcpy(bloque.b_content[0].b_name,".");//Padre
+    /*------------Bloque para carpeta root------------*/
+    strcpy(bloque.b_content[0].b_name,".");//Actual(el mismo)
     bloque.b_content[0].b_inodo=0;
 
-    strcpy(bloque.b_content[1].b_name,"..");//Actual
+    strcpy(bloque.b_content[1].b_name,"..");//Padre
     bloque.b_content[1].b_inodo=0;
 
     strcpy(bloque.b_content[2].b_name,"users.txt");
@@ -3159,7 +3207,7 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     bloque.b_content[3].b_inodo=-1;
     fseek(fp,super.s_block_start,SEEK_SET);
     fwrite(&bloque,sizeof(BloqueCarpeta),1,fp);
-    /*--------inodo para users.txt----------*/
+    /*-------------inodo para users.txt-------------*/
     inodo.i_uid = 1;
     inodo.i_gid = 1;
     inodo.i_size = 27;
@@ -3174,12 +3222,127 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     inodo.i_perm = 755;
     fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
     fwrite(&inodo,sizeof(InodoTable),1,fp);
-    /*--------Bloque para users.txt---------*/
+    /*-------------Bloque para users.txt------------*/
     BloqueArchivo archivo;
     memset(archivo.b_content,0,sizeof(archivo.b_content));
     strcpy(archivo.b_content,"1,G,root\n1,U,root,root,123\n");
-    fseek(fp,super.s_bm_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
+    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
     fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
 
+    cout << "EXT3" << endl;
+    cout << "..." << endl;
+    cout << "Disco formateado con exito" << endl;
+
     fclose(fp);
+}
+
+/* Funcion para iniciar sesion
+ * @param QString direccion: ruta del disco donde se encuentra la particion
+ * @param QString nombre: nombre de la particion
+ * @param QString user: Nombre del usuario
+ * @param QString password: contrasena
+ * @return 1 = login exitoso | 2 = contrasena incorrecta | 0 = usuario no encontrado
+*/
+int log_in(QString direccion, QString nombre, QString user, QString password){
+    int index = buscarParticion_P_E(direccion,nombre);
+    if(index != -1){
+        MBR masterboot;
+        SuperBloque super;
+        InodoTable inodo;
+        FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
+        fread(&masterboot,sizeof(MBR),1,fp);
+        fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+        fread(&super,sizeof(SuperBloque),1,fp);
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        fread(&inodo,sizeof(InodoTable),1,fp);
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        inodo.i_atime = time(nullptr);
+        fwrite(&inodo,sizeof(InodoTable),1,fp);
+        fclose(fp);
+        return buscarUsuario(super.s_inode_start + static_cast<int>(sizeof(InodoTable)),super.s_block_start,user,password, direccion);
+    }else{
+        index = buscarParticion_L(direccion, nombre);
+        if(index != -1){
+
+        }
+    }
+    return 0;
+}
+
+/* Funcion para verificar datos
+ * @param int inicioInodo: Byte donde inicia el inodo del archivo users.txt
+ * @param int inicioBloque: Byte donde inicia la tabla de bloques
+ * @QString user: Nombre del usuario
+ * @param QString password: contrasena
+ * @param QString direccion: ruta del disco donde se encuentra la particion
+ * @return 1 = login exitoso | 2 = contrasena incorrecta | 0 = usuario no encontrado
+*/
+int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString password, QString direccion){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
+
+    char cadena[400] = "\0";
+    InodoTable inodo;
+    fseek(fp,inicioInodo,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for(int i = 0; i < 15; i++){
+        if(inodo.i_block[i] != -1){
+            BloqueArchivo archivo;
+            fseek(fp,inicioBloque,SEEK_SET);
+            fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            for(int j = 0; j < inodo.i_block[i]; j++){
+                fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            }
+            strcat(cadena,archivo.b_content);
+        }
+    }
+
+    fclose(fp);
+
+    char *end_str;
+    char *token = strtok_r(cadena,"\n",&end_str);
+    while(token != nullptr){
+        char id[2];
+        char tipo[2];
+        char user_[12];
+        char password_[12];
+        char *end_token;
+        char *token2 = strtok_r(token,",",&end_token);
+        strcpy(id,token2);
+        if(strcmp(id,"0") != 0){//Verificar que no sea un U/G eliminado
+            token2=strtok_r(nullptr,",",&end_token);
+            strcpy(tipo,token2);
+            if(strcmp(tipo,"U") == 0){
+                token2 = strtok_r(nullptr,",",&end_token);
+                token2 = strtok_r(nullptr,",",&end_token);
+                strcpy(user_,token2);
+                token2 = strtok_r(nullptr,",",&end_token);
+                strcpy(password_,token2);
+                if(strcmp(user_,user.toStdString().c_str()) == 0){
+                    if(strcmp(password_,password.toStdString().c_str()) == 0){
+                        currentUser.id = atoi(id);
+                        //currentUser.id_grp
+                        strcpy(currentUser.username,user_);
+                        strcpy(currentUser.password,password_);
+                        return 1;
+                    }else
+                        return 2;
+                }
+            }
+        }
+        token = strtok_r(nullptr,"\n",&end_str);
+    }
+
+    return 0;
+}
+
+void log_out(){
+    if(flag_login){
+        flag_login = false;
+        currentUser.id = -1;
+        currentUser.id_grp -1;
+        memset(currentUser.username,0,sizeof(currentUser.username));
+        memset(currentUser.password,0,sizeof(currentUser.password));
+    }else
+        cout << "ERROR no hay ninguna sesion activa" << endl;
 }
