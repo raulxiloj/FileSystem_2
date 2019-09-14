@@ -64,6 +64,11 @@ void formatearEXT3(int,int,QString);
 int log_in(QString, QString, QString, QString);
 int buscarUsuario(int,int,QString,QString,QString);
 void log_out();
+int buscarGrupo(QString);
+int getID_grp();
+void agregarGrupo(QString,QString);
+char getLogicFit(QString,QString);
+int buscarBloque(FILE*,char,char);
 
 using namespace std;
 
@@ -228,18 +233,24 @@ typedef struct{
 }Journal;
 
 typedef struct{
-    int id;
+    int id_user;
     int id_grp;
+    int inicioSuper;
+    int inicioInodos;
+    int inicioBloques;
+    QString direccion;
     char username[12];
     char password[12];
     char group[12];
-}LoggedUser;
+    char fit;
+}Sesion;
 
 /*Variables globales*/
 ListaMount *lista = new ListaMount();
-LoggedUser currentUser;
+Sesion currentSession;
 bool flag_global = true;
 bool flag_login = false;
+
 /*
     FUNCION PRINCIPAL
 */
@@ -2408,6 +2419,7 @@ void recorrerLOGIN(Nodo *raiz){
             }
             flagUser = true;
             user = n.valor;
+            user = user.replace("\"","");
         }
             break;
         case PASSWORD:
@@ -2419,6 +2431,7 @@ void recorrerLOGIN(Nodo *raiz){
             }
             flagPassword = true;
             password = n.valor;
+            user = user.replace("\"","");
         }
             break;
         case ID:
@@ -2464,10 +2477,29 @@ void recorrerLOGIN(Nodo *raiz){
 }
 
 void recorrerMKGRP(Nodo *raiz){
-
+    QString grpName = raiz->hijos.at(0).valor;
+    if(flag_login){
+        if(currentSession.id_user == 1 && currentSession.id_grp == 1){//Usuario root
+            if(grpName.length() <= 10){
+                int grupo = buscarGrupo(grpName);
+                if(grupo == -1){
+                    int idGrp = getID_grp();
+                    QString direccion = currentSession.direccion;
+                    QString nuevoGrupo = QString::number(idGrp)+",G,"+grpName+"\n";
+                    agregarGrupo(direccion,nuevoGrupo);
+                    cout << "Grupo creado con exito "<< endl;
+                }else
+                    cout << "ERROR ya existe un grupo con ese nombre" << endl;
+            }else
+                cout << "ERROR el nombre del grupo no puede exceder los 10 caracters" << endl;
+        }else
+            cout << "ERROR solo el usuario root puede ejecutar este comando" << endl;
+    }else
+        cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
 }
 
 void recorrerRMGRP(Nodo *raiz){
+    QString grpName = raiz->hijos.at(0).valor;
 
 }
 
@@ -3194,7 +3226,7 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     fseek(fp,super.s_inode_start,SEEK_SET);
     fwrite(&inodo,sizeof(InodoTable),1,fp);
     /*------------Bloque para carpeta root------------*/
-    strcpy(bloque.b_content[0].b_name,".");//Actual(el mismo)
+    strcpy(bloque.b_content[0].b_name,".");//Actual
     bloque.b_content[0].b_inodo=0;
 
     strcpy(bloque.b_content[1].b_name,"..");//Padre
@@ -3259,11 +3291,26 @@ int log_in(QString direccion, QString nombre, QString user, QString password){
         inodo.i_atime = time(nullptr);
         fwrite(&inodo,sizeof(InodoTable),1,fp);
         fclose(fp);
-        return buscarUsuario(super.s_inode_start + static_cast<int>(sizeof(InodoTable)),super.s_block_start,user,password, direccion);
+        currentSession.inicioSuper = masterboot.mbr_partition[index].part_start;
+        currentSession.fit = masterboot.mbr_partition[index].part_fit;
+        return buscarUsuario(super.s_inode_start,super.s_block_start,user,password, direccion);
     }else{
         index = buscarParticion_L(direccion, nombre);
         if(index != -1){
-
+            SuperBloque super;
+            InodoTable inodo;
+            FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
+            fseek(fp,index + static_cast<int>(sizeof(EBR)),SEEK_SET);
+            fread(&super,sizeof(SuperBloque),1,fp);
+            fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+            fread(&inodo,sizeof(InodoTable),1,fp);
+            fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+            inodo.i_atime = time(nullptr);
+            fwrite(&inodo,sizeof(InodoTable),1,fp);
+            fclose(fp);
+            currentSession.inicioSuper = index + static_cast<int>(sizeof(EBR));
+            currentSession.fit = getLogicFit(direccion,nombre);
+            return buscarUsuario(super.s_inode_start,super.s_block_start,user,password,direccion);
         }
     }
     return 0;
@@ -3282,15 +3329,14 @@ int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString passw
 
     char cadena[400] = "\0";
     InodoTable inodo;
-    fseek(fp,inicioInodo,SEEK_SET);
+    fseek(fp,inicioInodo + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
     fread(&inodo,sizeof(InodoTable),1,fp);
 
     for(int i = 0; i < 15; i++){
         if(inodo.i_block[i] != -1){
             BloqueArchivo archivo;
             fseek(fp,inicioBloque,SEEK_SET);
-            fread(&archivo,sizeof(BloqueArchivo),1,fp);
-            for(int j = 0; j < inodo.i_block[i]; j++){
+            for(int j = 0; j <= inodo.i_block[i]; j++){
                 fread(&archivo,sizeof(BloqueArchivo),1,fp);
             }
             strcat(cadena,archivo.b_content);
@@ -3304,6 +3350,7 @@ int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString passw
     while(token != nullptr){
         char id[2];
         char tipo[2];
+        QString group;
         char user_[12];
         char password_[12];
         char *end_token;
@@ -3314,16 +3361,20 @@ int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString passw
             strcpy(tipo,token2);
             if(strcmp(tipo,"U") == 0){
                 token2 = strtok_r(nullptr,",",&end_token);
+                group = token2;
                 token2 = strtok_r(nullptr,",",&end_token);
                 strcpy(user_,token2);
                 token2 = strtok_r(nullptr,",",&end_token);
                 strcpy(password_,token2);
                 if(strcmp(user_,user.toStdString().c_str()) == 0){
                     if(strcmp(password_,password.toStdString().c_str()) == 0){
-                        currentUser.id = atoi(id);
-                        //currentUser.id_grp
-                        strcpy(currentUser.username,user_);
-                        strcpy(currentUser.password,password_);
+                        currentSession.direccion = direccion;
+                        currentSession.id_user = atoi(id);
+                        currentSession.id_grp = buscarGrupo(group);
+                        strcpy(currentSession.username,user_);
+                        strcpy(currentSession.password,password_);
+                        currentSession.inicioInodos = inicioInodo;
+                        currentSession.inicioBloques = inicioBloque;
                         return 1;
                     }else
                         return 2;
@@ -3336,13 +3387,358 @@ int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString passw
     return 0;
 }
 
+/* Funcion para verificar la existencia de un grupo
+ * @param QString name = nombre del grupo
+ * @return # del grupo | -1 = no existe
+*/
+int buscarGrupo(QString name){
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+
+    char cadena[400] = "\0";
+    SuperBloque super;
+    InodoTable inodo;
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)), SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for(int i = 0; i < 15; i++){
+        if(inodo.i_block[i] != -1){
+            BloqueArchivo archivo;
+            fseek(fp,super.s_block_start,SEEK_SET);
+            for(int j = 0; j <= inodo.i_block[i]; j++){
+                fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            }
+            strcat(cadena,archivo.b_content);
+        }
+    }
+
+    fclose(fp);
+
+    char *end_str;
+    char *token = strtok_r(cadena,"\n",&end_str);
+    while(token != nullptr){
+        char id[2];
+        char tipo[2];
+        char group[12];
+        char *end_token;
+        char *token2 = strtok_r(token,",",&end_token);
+        strcpy(id,token2);
+        if(strcmp(id,"0") != 0){//Verificar que no sea un U/G eliminado
+            token2 = strtok_r(nullptr,",",&end_token);
+            strcpy(tipo,token2);
+            if(strcmp(tipo,"G") == 0){
+                strcpy(group,end_token);
+                if(strcmp(group,name.toStdString().c_str()) == 0) return atoi(id);
+            }
+        }
+        token = strtok_r(nullptr,"\n",&end_str);
+    }
+
+    return -1;
+}
+
 void log_out(){
     if(flag_login){
         flag_login = false;
-        currentUser.id = -1;
-        currentUser.id_grp -1;
-        memset(currentUser.username,0,sizeof(currentUser.username));
-        memset(currentUser.password,0,sizeof(currentUser.password));
+        currentSession.id_user = -1;
+        //currentUser.id_grp -1;
+        memset(currentSession.username,0,sizeof(currentSession.username));
+        memset(currentSession.password,0,sizeof(currentSession.password));
+        currentSession.direccion = "";
+        currentSession.inicioSuper = -1;
+        //currentSession.inicioInodo = -1;
+        //currentSession.inicioBloque = -1;
+        cout << "...\nSesion finalizada " << endl;
     }else
         cout << "ERROR no hay ninguna sesion activa" << endl;
+}
+
+/* Funcion para obtener el id del nuevo grupo
+ * @return id del ultimo grupo + 1
+*/
+int getID_grp(){
+
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+
+    char cadena[400] = "\0";
+    int aux_id = -1;
+    SuperBloque super;
+    InodoTable inodo;
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)), SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for(int i = 0; i < 15; i++){
+        if(inodo.i_block[i] != -1){
+            BloqueArchivo archivo;
+            fseek(fp,super.s_block_start,SEEK_SET);
+            for(int j = 0; j <= inodo.i_block[i]; j++){
+                fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            }
+            strcat(cadena,archivo.b_content);
+        }
+    }
+
+    fclose(fp);
+
+    char *end_str;
+    char *token = strtok_r(cadena,"\n",&end_str);
+    while(token != nullptr){
+        char id[2];
+        char tipo[2];
+        char *end_token;
+        char *token2 = strtok_r(token,",",&end_token);
+        strcpy(id,token2);
+        if(strcmp(id,"0") != 0){//Verificar que no sea un U/G eliminado
+            token2 = strtok_r(nullptr,",",&end_token);
+            strcpy(tipo,token2);
+            if(strcmp(tipo,"G") == 0){
+                aux_id = atoi(id);
+            }
+
+        }
+        token = strtok_r(nullptr,"\n",&end_str);
+    }
+    return ++aux_id;
+}
+
+/* Funcion para agregar un grupo
+*/
+void agregarGrupo(QString direccion,QString name){
+    FILE *fp = fopen(direccion.toStdString().c_str(), "rb+");
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueArchivo archivo;
+    int blockIndex = 0;
+    QString grupos = "";//Contendra todo el archivo
+
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)), SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+    for(int i = 0; i < 12; i++){
+        if(inodo.i_block[i] != -1)
+            blockIndex = inodo.i_block[i];
+    }
+
+    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*blockIndex,SEEK_SET);
+    fread(&archivo,sizeof(BloqueArchivo),1,fp);
+    int enUso = static_cast<int>(strlen(archivo.b_content));
+    int libre = 64 - enUso;
+
+    if(name.length() <= libre){
+        strcat(archivo.b_content,name.toStdString().c_str());
+        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*blockIndex,SEEK_SET);
+        fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        fread(&inodo,sizeof(InodoTable),1,fp);
+        inodo.i_size = inodo.i_size + name.length();
+        fwrite(&inodo,sizeof(InodoTable),1,fp);
+    }else{
+        QString aux = "";
+        QString aux2 = "";
+        int i = 0;
+
+        for(i = 0; i < libre; i++)
+            aux += name.at(i);
+
+        for(; i < name.length(); i++)
+            aux2  += name.at(i);
+
+        strcat(archivo.b_content,aux.toStdString().c_str());
+        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*blockIndex,SEEK_SET);
+        fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+        BloqueArchivo auxArchivo;
+        strcpy(auxArchivo.b_content,aux2.toStdString().c_str());
+        int bit = buscarBloque(fp,'B',currentSession.fit);
+        /*Guardamos el bloque en el bitmap y en la tabla de bloques*/
+        fseek(fp,super.s_bm_block_start + static_cast<int>(sizeof(BloqueArchivo))*bit,SEEK_SET);
+        fputc('1',fp);
+        fseek(fp,super.s_block_start + (static_cast<int>(sizeof(BloqueArchivo))*bit),SEEK_SET);
+        fwrite(&auxArchivo,sizeof(BloqueArchivo),1,fp);
+        /*Guardamos el modificado del inodo*/
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        fread(&inodo,sizeof(InodoTable),1,fp);
+        inodo.i_size = inodo.i_size + name.length();
+        inodo.i_mtime = time(nullptr);
+        inodo.i_block[blockIndex] = bit;//--------
+        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+        fwrite(&inodo,sizeof(InodoTable),1,fp);
+        /*Guardamos la nueva cantidad de bloques libres y el primer bloque libre*/
+        super.s_first_blo = super.s_first_blo + 1;
+        super.s_free_blocks_count = super.s_free_blocks_count - 1;
+        fseek(fp,currentSession.inicioSuper,SEEK_SET);
+        fwrite(&super,sizeof(SuperBloque),1,fp);
+    }
+    fclose(fp);
+}
+
+/* Funcion que devuelve el byte donde inicia la particion logica si esta existe
+ * @param QString direccion: ruta del archivo
+ * @param QString nombre: nombre de la particion
+ * @return char: ajuste de la particion
+*/
+char getLogicFit(QString direccion, QString nombre){
+    string auxPath = direccion.toStdString();
+    string auxName = nombre.toStdString();
+    FILE *fp;
+    if((fp = fopen(auxPath.c_str(),"rb+"))){
+        int extendida = -1;
+        MBR masterboot;
+        fseek(fp,0,SEEK_SET);
+        fread(&masterboot,sizeof(MBR),1,fp);
+        for(int i = 0; i < 4; i++){
+            if(masterboot.mbr_partition[i].part_type == 'E'){
+                extendida = i;
+                break;
+            }
+        }
+        if(extendida != -1){
+            EBR extendedBoot;
+            fseek(fp, masterboot.mbr_partition[extendida].part_start,SEEK_SET);
+            while(fread(&extendedBoot,sizeof(EBR),1,fp)!=0 && (ftell(fp) < masterboot.mbr_partition[extendida].part_start + masterboot.mbr_partition[extendida].part_size)){
+                if(strcmp(extendedBoot.part_name, auxName.c_str()) == 0){
+                    return extendedBoot.part_fit;
+                }
+            }
+        }
+        fclose(fp);
+    }
+    return -1;
+}
+
+
+/* Funcion que devuelve el byte donde inicia la particion logica si esta existe
+ * @param FILE fp: archivo en el que se esta leyendo/escribiendo
+ * @param int tipo: tipo de bloque a buscar
+ * @param char fit: ajuste del disco
+ * @return -1 = Ya no existen bloques libres | # bit libre en el bitmap
+*/
+int buscarBloque(FILE *fp, char tipo, char fit){
+    SuperBloque super;
+    int inicio_bm = 0;
+    char tempBit = '0';
+    int bit_libre = -1;
+    int tam_bm = 0;
+
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+
+    if(tipo == 'I'){
+        tam_bm = super.s_inodes_count;
+        inicio_bm = currentSession.inicioInodos;
+    }else if(tipo == 'B'){
+        tam_bm = super.s_blocks_count;
+        inicio_bm = currentSession.inicioBloques;
+    }
+
+    /*----------------Tipo de ajuste a utilizar----------------*/
+    if(fit == 'F'){//Primer ajuste
+        for(int i = 0; i < tam_bm; i++){
+            fseek(fp,inicio_bm + i,SEEK_SET);
+            tempBit = static_cast<char>(fgetc(fp));
+            if(tempBit == '0'){
+                bit_libre = i;
+                return bit_libre;
+            }
+        }
+
+        if(bit_libre == -1)
+            return -1;
+
+    }else if(fit == 'B'){//Mejor ajuste
+        int libres = 0;
+        int auxLibres = -1;
+
+        for(int i = 0; i < tam_bm; i++){//Primer recorrido
+            fseek(fp,inicio_bm + i,SEEK_SET);
+            tempBit = static_cast<char>(fgetc(fp));
+            if(tempBit == '0'){
+                libres++;
+                if(i+1 == tam_bm){
+                    if(auxLibres == -1 || auxLibres == 0)
+                        auxLibres = libres;
+                    else{
+                        if(auxLibres > libres)
+                            auxLibres = libres;
+                    }
+                    libres = 0;
+                }
+            }else if(tempBit == '1'){
+                if(auxLibres == -1 || auxLibres == 0)
+                    auxLibres = libres;
+                else{
+                    if(auxLibres > libres)
+                        auxLibres = libres;
+                }
+                libres = 0;
+            }
+        }
+
+        for(int i = 0; i < tam_bm; i++){
+            fseek(fp,inicio_bm + i, SEEK_SET);
+            tempBit = static_cast<char>(fgetc(fp));
+            if(tempBit == '0'){
+                libres++;
+                if(i+1 == tam_bm)
+                    return ((i+1)-libres);
+            }else if(tempBit == '1'){
+                if(auxLibres == libres)
+                    return ((i+1) - libres);
+                libres = 0;
+            }
+        }
+
+        return -1;
+
+    }else if(fit == 'W'){//Peor ajuste
+        int libres = 0;
+        int auxLibres = -1;
+
+        for (int i = 0; i < tam_bm; i++) {//Primer recorrido
+            fseek(fp,inicio_bm + i, SEEK_SET);
+            tempBit = static_cast<char>(fgetc(fp));
+            if(tempBit == '0'){
+                libres++;
+                if(i+1 == tam_bm){
+                    if(auxLibres == -1 || auxLibres == 0)
+                        auxLibres = libres;
+                    else {
+                        if(auxLibres < libres)
+                            auxLibres = libres;
+                    }
+                    libres = 0;
+                }
+            }else if(tempBit == '1'){
+                if(auxLibres == -1 || auxLibres == 0)
+                    auxLibres = libres;
+                else{
+                    if(auxLibres < libres)
+                        auxLibres = libres;
+                }
+                libres = 0;
+            }
+        }
+
+        for (int i = 0; i < tam_bm; i++) {
+            fseek(fp,inicio_bm + i, SEEK_SET);
+            tempBit = static_cast<char>(fgetc(fp));
+            if(tempBit == '0'){
+                libres++;
+                if(i+1 == tam_bm)
+                    return ((i+1) - libres);
+            }else if(tempBit == '1'){
+                if(auxLibres == libres)
+                    return ((i+1) - libres);
+                libres = 0;
+            }
+        }
+
+        return -1;
+    }
+
+    return 0;
 }
