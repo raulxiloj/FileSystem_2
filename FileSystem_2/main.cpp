@@ -66,9 +66,10 @@ int buscarUsuario(int,int,QString,QString,QString);
 void log_out();
 int buscarGrupo(QString);
 int getID_grp();
-void agregarGrupo(QString,QString);
+void agregarGrupo(QString);
 char getLogicFit(QString,QString);
 int buscarBloque(FILE*,char,char);
+void eliminarGrupo(QString);
 
 using namespace std;
 
@@ -236,8 +237,6 @@ typedef struct{
     int id_user;
     int id_grp;
     int inicioSuper;
-    int inicioInodos;
-    int inicioBloques;
     QString direccion;
     char username[12];
     char password[12];
@@ -2478,15 +2477,15 @@ void recorrerLOGIN(Nodo *raiz){
 
 void recorrerMKGRP(Nodo *raiz){
     QString grpName = raiz->hijos.at(0).valor;
+    grpName = grpName.replace("\"","");
     if(flag_login){
         if(currentSession.id_user == 1 && currentSession.id_grp == 1){//Usuario root
             if(grpName.length() <= 10){
                 int grupo = buscarGrupo(grpName);
                 if(grupo == -1){
                     int idGrp = getID_grp();
-                    QString direccion = currentSession.direccion;
                     QString nuevoGrupo = QString::number(idGrp)+",G,"+grpName+"\n";
-                    agregarGrupo(direccion,nuevoGrupo);
+                    agregarGrupo(nuevoGrupo);
                     cout << "Grupo creado con exito "<< endl;
                 }else
                     cout << "ERROR ya existe un grupo con ese nombre" << endl;
@@ -2500,7 +2499,18 @@ void recorrerMKGRP(Nodo *raiz){
 
 void recorrerRMGRP(Nodo *raiz){
     QString grpName = raiz->hijos.at(0).valor;
-
+    grpName = grpName.replace("\"","");
+    if(flag_login){
+        if(currentSession.id_user == 1 && currentSession.id_grp == 1){//Usuario root
+            int grupo = buscarGrupo(grpName);
+            if(grupo != -1){
+                eliminarGrupo(grpName);
+            }else
+                cout << "ERROR el grupo no existe" << endl;
+        }else
+           cout << "ERROR solo el usuario root puede ejecutar este comando" << endl;
+    }else
+        cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
 }
 
 void recorrerMKUSR(Nodo *raiz){
@@ -2562,7 +2572,7 @@ void recorrerMKUSR(Nodo *raiz){
 }
 
 void recorrerRMUSR(Nodo *raiz){
-
+    QString userName = raiz->hijos.at(0).valor;
 }
 
 void recorrerCHMOD(Nodo *raiz){
@@ -3373,8 +3383,6 @@ int buscarUsuario(int inicioInodo, int inicioBloque, QString user, QString passw
                         currentSession.id_grp = buscarGrupo(group);
                         strcpy(currentSession.username,user_);
                         strcpy(currentSession.password,password_);
-                        currentSession.inicioInodos = inicioInodo;
-                        currentSession.inicioBloques = inicioBloque;
                         return 1;
                     }else
                         return 2;
@@ -3438,6 +3446,7 @@ int buscarGrupo(QString name){
     return -1;
 }
 
+/* Metodo que reinicia las variables de sesion */
 void log_out(){
     if(flag_login){
         flag_login = false;
@@ -3447,8 +3456,6 @@ void log_out(){
         memset(currentSession.password,0,sizeof(currentSession.password));
         currentSession.direccion = "";
         currentSession.inicioSuper = -1;
-        //currentSession.inicioInodo = -1;
-        //currentSession.inicioBloque = -1;
         cout << "...\nSesion finalizada " << endl;
     }else
         cout << "ERROR no hay ninguna sesion activa" << endl;
@@ -3504,15 +3511,15 @@ int getID_grp(){
     return ++aux_id;
 }
 
-/* Funcion para agregar un grupo
+/* Funcion para agregar un grupo al archivo users.txt de una particion
+ * @param QString name: Datos del nuevo grupo
 */
-void agregarGrupo(QString direccion,QString name){
-    FILE *fp = fopen(direccion.toStdString().c_str(), "rb+");
+void agregarGrupo(QString name){
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(), "rb+");
     SuperBloque super;
     InodoTable inodo;
     BloqueArchivo archivo;
     int blockIndex = 0;
-    QString grupos = "";//Contendra todo el archivo
 
     fseek(fp,currentSession.inicioSuper,SEEK_SET);
     fread(&super,sizeof(SuperBloque),1,fp);
@@ -3564,7 +3571,7 @@ void agregarGrupo(QString direccion,QString name){
         fread(&inodo,sizeof(InodoTable),1,fp);
         inodo.i_size = inodo.i_size + name.length();
         inodo.i_mtime = time(nullptr);
-        inodo.i_block[blockIndex] = bit;//--------
+        inodo.i_block[blockIndex] = bit;
         fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
         fwrite(&inodo,sizeof(InodoTable),1,fp);
         /*Guardamos la nueva cantidad de bloques libres y el primer bloque libre*/
@@ -3610,7 +3617,6 @@ char getLogicFit(QString direccion, QString nombre){
     return -1;
 }
 
-
 /* Funcion que devuelve el byte donde inicia la particion logica si esta existe
  * @param FILE fp: archivo en el que se esta leyendo/escribiendo
  * @param int tipo: tipo de bloque a buscar
@@ -3629,10 +3635,10 @@ int buscarBloque(FILE *fp, char tipo, char fit){
 
     if(tipo == 'I'){
         tam_bm = super.s_inodes_count;
-        inicio_bm = currentSession.inicioInodos;
+        inicio_bm = super.s_bm_inode_start;
     }else if(tipo == 'B'){
         tam_bm = super.s_blocks_count;
-        inicio_bm = currentSession.inicioBloques;
+        inicio_bm = super.s_bm_block_start;
     }
 
     /*----------------Tipo de ajuste a utilizar----------------*/
@@ -3742,3 +3748,66 @@ int buscarBloque(FILE *fp, char tipo, char fit){
 
     return 0;
 }
+
+/* Funcion para eliminar un grupo al archivo users.txt de una particion
+ * @param QString name: Datos del nuevo grupo
+*/
+void eliminarGrupo(QString name){
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueArchivo archivo;
+
+    int col = 1;
+    char actual;
+    string palabra = "";
+    int posicion = 0;
+    int id = -1;
+    char tipo = '\0';
+    string grupo = "";
+
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for (int i = 0; i < 12; i++) {
+        if(inodo.i_block[i] != -1){
+            fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
+            fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            for(int j = 0; j < 64; j++){
+                actual = archivo.b_content[j];
+                if(actual=='\n'){
+                    if(tipo == 'G'){
+                        grupo = palabra;
+                        if(strcmp(grupo.c_str(),name.toStdString().c_str()) == 0){
+                            fseek(fp,super.s_block_start+static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
+                            archivo.b_content[posicion] = '0';
+                            fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+                            cout << "Grupo eliminado con exito" << endl;
+                            break;
+                        }
+                    }
+                    col = 1;
+                    palabra = "";
+                }else if(actual != ','){
+                    palabra += actual;
+                    col++;
+                }else if(actual == ','){
+                    if(col == 2){
+                        id = atoi(palabra.c_str());
+                        posicion = j;
+                    }
+                    else if(col == 4)
+                        tipo = palabra[0];
+                    col++;
+                    palabra = "";
+                }
+            }
+        }
+    }
+
+    fclose(fp);
+}
+
