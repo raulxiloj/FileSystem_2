@@ -72,6 +72,9 @@ int buscarBloque(FILE*,char,char);
 void eliminarGrupo(QString);
 bool buscarUsuario(QString);
 int getID_usr();
+void eliminarUsuario(QString);
+
+void graficarInodos(QString,QString,QString,int,int,int);
 
 using namespace std;
 
@@ -1055,21 +1058,31 @@ void recorrerREP(Nodo *raiz)
                         system(comando2.c_str());
                         if(valName == "mbr"){
                             graficarMBR(aux->direccion,valPath,ext);
-                        }else{
+                        }else if(valName == "disk"){
                             graficarDisco(aux->direccion,valPath,ext);
+                        }else if(valName == "inode"){
+                            int index = buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){
+                                MBR masterboot;
+                                SuperBloque super;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fclose(fp);
+                                graficarInodos(aux->direccion,valPath,ext,super.s_bm_inode_start,super.s_inode_start,super.s_bm_block_start);
+                            }else{
+
+                            }
                         }
-                    }else{
+                    }else
                         cout << "ERROR no se encuentra la particion" << endl;
-                    }
-                }else{
+                }else
                     cout << "ERROR parametro -id no definido" << endl;
-                }
-            }else{
+            }else
                 cout << "ERROR parametro -name no definido" << endl;
-            }
-        }else{
+        }else
             cout << "ERROR parametro -path no definido" << endl;
-        }
     }
 
 
@@ -2572,16 +2585,22 @@ void recorrerMKUSR(Nodo *raiz){
                     if(user.length() <= 10){
                         if(pass.length() <= 10){
                             if(group.length() <= 10){
-                                if(buscarGrupo(group) != -1){
-                                    if(!buscarUsuario(user)){
-                                        int id = getID_usr();
-                                        QString datos = QString::number(id) + ",U,"+group+","+user+","+pass+"\n";
-                                        agregarUsersTXT(datos);
-                                        cout << "Usuario creado con exito " << endl;
+                                if(flag_login){
+                                    if(currentSession.id_user == 1 && currentSession.id_grp == 1){//Usuario root
+                                        if(buscarGrupo(group) != -1){
+                                            if(!buscarUsuario(user)){
+                                                int id = getID_usr();
+                                                QString datos = QString::number(id) + ",U,"+group+","+user+","+pass+"\n";
+                                                agregarUsersTXT(datos);
+                                                cout << "Usuario creado con exito " << endl;
+                                            }else
+                                                cout << "ERROR el usuario ya existe" <<endl;
+                                        }else
+                                            cout << "ERROR no se encuentra el grupo al que pertenecera el usuario " << endl;
                                     }else
-                                        cout << "ERROR el usuario ya existe" <<endl;
+                                        cout << "ERROR solo el usuario root puede ejecutar este comando" << endl;
                                 }else
-                                    cout << "ERROR no se encuentra el grupo al que pertenecera el usuario " << endl;
+                                    cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
                             }else
                                 cout << "ERROR grupo del usuario excede de los 10 caracteres permitidos" << endl;
                         }else
@@ -2601,6 +2620,16 @@ void recorrerMKUSR(Nodo *raiz){
 void recorrerRMUSR(Nodo *raiz){
     QString userName = raiz->hijos.at(0).valor;
     userName = userName.replace("\"","");
+    if(flag_login){
+        if(currentSession.id_user == 1 && currentSession.id_grp == 1){//Usuario root
+            if(buscarUsuario(userName)){
+                eliminarUsuario(userName);
+            }else
+                cout << "ERROR el usuario no existe" << endl;
+        }else
+           cout << "ERROR solo el usuario root puede ejecutar este comando" << endl;
+    }else
+        cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
 }
 
 void recorrerCHMOD(Nodo *raiz){
@@ -3784,7 +3813,7 @@ int buscarBloque(FILE *fp, char tipo, char fit){
     return 0;
 }
 
-/* Funcion para eliminar un grupo al archivo users.txt de una particion
+/* Metodo para eliminar un grupo del archivo users.txt de una particion
  * @param QString name: Datos del nuevo grupo
 */
 void eliminarGrupo(QString name){
@@ -3892,8 +3921,10 @@ bool buscarUsuario(QString name){
             if(strcmp(tipo,"U") == 0){
                 token2 = strtok_r(nullptr,",",&end_token);
                 token2 = strtok_r(nullptr,",",&end_token);
-                strcpy(user,end_token);
-                if(strcmp(user,name.toStdString().c_str()) == 0) return true;
+                strcpy(user,token2);
+
+                if(strcmp(user,name.toStdString().c_str()) == 0)
+                    return true;
             }
         }
         token = strtok_r(nullptr,"\n",&end_str);
@@ -3949,4 +3980,136 @@ int getID_usr(){
         token = strtok_r(nullptr,"\n",&end_str);
     }
     return ++res;
+}
+
+/* Metodo para eliminar un usuario del archivo users.txt de una particion
+ * @param QString name: Datos del nuevo grupo
+*/
+void eliminarUsuario(QString name){
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueArchivo archivo;
+
+    int col = 1;
+    char actual;
+    string palabra = "";
+    int posicion = 0;
+    int id = -1;
+    char tipo = '\0';
+    string grupo = "";
+    string usuario = "";
+
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    //Nos posicionamos en el inodo del archivo users.txt
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)),SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for (int i = 0; i < 12; i++) {
+        if(inodo.i_block[i] != -1){
+            fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
+            fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            for(int j = 0; j < 64; j++){
+                actual = archivo.b_content[j];
+                if(actual=='\n'){
+                    if(tipo == 'U'){
+                        if(strcmp(usuario.c_str(),name.toStdString().c_str()) == 0){
+                            fseek(fp,super.s_block_start+static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
+                            archivo.b_content[posicion] = '0';
+                            fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
+                            cout << "Usuario eliminado con exito" << endl;
+                            break;
+                        }
+                        usuario = "";
+                        grupo = "";
+                    }
+                    col = 1;
+                    palabra = "";
+                }else if(actual != ','){
+                    palabra += actual;
+                    col++;
+                }else if(actual == ','){
+                    if(col == 2){
+                        id = atoi(palabra.c_str());
+                        posicion = j;
+                    }
+                    else if(col == 4)
+                        tipo = palabra[0];
+                    else if(grupo == "")
+                        grupo = palabra;
+                    else if(usuario == "")
+                        usuario = palabra;
+                    col++;
+                    palabra = "";
+                }
+            }
+        }
+    }
+
+    fclose(fp);
+}
+
+/* Metodo para generar el reporte de inodos de una particion
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra nuestro reporte .jpg|.png|etc
+ * @param int bm_inode_start: Byte donde inicia el bitmap de inodos de la particion
+ * @param int inode_start: Byte donde inicia la tabla de inodos de la particion
+ * @param int bm_block_start: Byte donde inicia el bitmap de bloques de la particion
+*/
+
+void graficarInodos(QString direccion, QString destino, QString extension,int bm_inode_start,int inode_start,int bm_block_start){
+    FILE *fp = fopen(direccion.toStdString().c_str(), "r");
+
+    InodoTable inodo;
+    char buffer;
+
+    FILE *graph = fopen("grafica.dot","w");
+    fprintf(graph,"digraph G{\n\n");
+    int aux = bm_inode_start;
+    int i = 0;
+    while(aux < bm_block_start){
+        fseek(fp,bm_inode_start + i,SEEK_SET);
+        buffer = static_cast<char>(fgetc(fp));
+        aux++;
+        if(buffer == '1'){
+            fseek(fp,inode_start + static_cast<int>(sizeof(InodoTable))*i,SEEK_SET);
+            fread(&inodo,sizeof(InodoTable),1,fp);
+            fprintf(graph, "    subgraph inode_%d{\n",i);
+            fprintf(graph, "    nodo_%d [ shape=none label=<\n",i);
+            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> Inodo %d </td></tr>\n",i);
+            fprintf(graph, "    <tr> <td> i_uid </td> <td> %d </td>  </tr>\n",inodo.i_uid);
+            fprintf(graph, "    <tr> <td> i_gid </td> <td> %d </td>  </tr>\n",inodo.i_gid);
+            fprintf(graph, "    <tr> <td> i_size </td> <td> %d </td> </tr>\n",inodo.i_size);
+            struct tm *tm;
+            char fecha[100];
+            tm=localtime(&inodo.i_atime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_atime </td> <td> %s </td>  </tr>\n",fecha);
+            tm=localtime(&inodo.i_ctime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_ctime </td> <td> %s </td>  </tr>\n",fecha);
+            tm=localtime(&inodo.i_mtime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_mtime </td> <td> %s </td></tr>\n",fecha);
+            for(int b = 0; b < 15; b++){
+                fprintf(graph, "    <tr> <td> i_block_%d </td> <td> %d </td></tr>\n",b,inodo.i_block[b]);
+            }
+            fprintf(graph, "    <tr> <td> i_type </td> <td> %c </td>  </tr>\n",inodo.i_type);
+            fprintf(graph, "    <tr> <td> i_perm </td> <td> %d </td>  </tr>\n",inodo.i_perm);
+            fprintf(graph, "    </table>>]\n");
+            fprintf(graph, "    }\n");
+        }
+        i++;
+    }
+    fprintf(graph,"\n}");
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte generado con exito " << endl;
 }
