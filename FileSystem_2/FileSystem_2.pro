@@ -22,7 +22,8 @@ SOURCES += \
     graficador.cpp \
     listamount.cpp \
     nodomount.cpp \
-    reporte.cpp
+    reporte.cpp \
+    disco.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -37,7 +38,9 @@ HEADERS += \
     listamount.h \
     nodomount.h \
     reporte.h \
-    structs.h
+    structs.h \
+    mainheader.h \
+    disco.h
 
 DISTFILES += \
     Lexico.l \
