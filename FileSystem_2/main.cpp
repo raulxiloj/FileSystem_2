@@ -385,7 +385,7 @@ void recorrerMKDISK(Nodo *raiz)
                 crearArchivo(valRaid);
 
                 masterboot.mbr_date_created = time(nullptr);//-------
-                masterboot.mbr_disk_signature = (int)time(nullptr);//--------
+                masterboot.mbr_disk_signature = static_cast<int>(time(nullptr));
 
                 if(flagUnit){//Si hay parametro unit
                     if(valUnit == 'm'){
@@ -922,7 +922,22 @@ void recorrerREP(Nodo *raiz)
                         }else if(valName == "journaling"){
 
                         }else if(valName == "block"){
+                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){//Primaria|Extendida
+                                MBR masterboot;
+                                SuperBloque super;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fclose(fp);
+                                r->graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
+                            }else{//Logica
+                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                if(index != -1){
 
+                                }
+                            }
                         }else if(valName == "bm_inode"){
 
                         }else if(valName == "bm_block"){
@@ -967,7 +982,7 @@ void recorrerEXEC(Nodo *raiz)
         }
         fclose(fp);
     }else{
-        cout << "error" << endl;
+        cout << "ERROR script no encontrado" << endl;
     }
 }
 
@@ -1010,7 +1025,8 @@ QString getDirectorio(QString direccion){
 */
 void leerComando(char comando[400]){
     if(comando[0] != '#'){
-        YY_BUFFER_STATE buffer = yy_scan_string(comando);
+        YY_BUFFER_STATE buffer;
+        buffer = yy_scan_string(comando);
         if(yyparse() == 0){
             if(raiz!=nullptr){
                 Graficador *g = new Graficador(raiz);
@@ -1867,6 +1883,7 @@ void formatearEXT2(int inicio, int tamano, QString direccion){
 
     char buffer = '0';
     char buffer2 = '1';
+    char buffer3 = '2';
 
     FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
 
@@ -1890,7 +1907,7 @@ void formatearEXT2(int inicio, int tamano, QString direccion){
     /*----------bit para / y users.txt en BM----------*/
     fseek(fp,super.s_bm_block_start,SEEK_SET);
     fwrite(&buffer2,sizeof(char),1,fp);
-    fwrite(&buffer2,sizeof(char),1,fp);
+    fwrite(&buffer3,sizeof(char),1,fp);
     /*------------inodo para carpeta root-------------*/
     inodo.i_uid = 1;
     inodo.i_gid = 1;
@@ -1985,6 +2002,7 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
 
     char buffer = '0';
     char buffer2 = '1';
+    char buffer3 = '2';
 
     FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
 
@@ -2008,7 +2026,7 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
     /*----------bit para / y users.txt en BM----------*/
     fseek(fp,super.s_bm_block_start,SEEK_SET);
     fwrite(&buffer2,sizeof(char),1,fp);
-    fwrite(&buffer2,sizeof(char),1,fp);
+    fwrite(&buffer3,sizeof(char),1,fp);
     /*------------inodo para carpeta root-------------*/
     inodo.i_uid = 1;
     inodo.i_gid = 1;
@@ -2330,7 +2348,7 @@ void agregarUsersTXT(QString datos){
     fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*blockIndex,SEEK_SET);
     fread(&archivo,sizeof(BloqueArchivo),1,fp);
     int enUso = static_cast<int>(strlen(archivo.b_content));
-    int libre = 64 - enUso;
+    int libre = 63 - enUso;
 
     if(datos.length() <= libre){
         strcat(archivo.b_content,datos.toStdString().c_str());
@@ -2351,6 +2369,7 @@ void agregarUsersTXT(QString datos){
         for(; i < datos.length(); i++)
             aux2  += datos.at(i);
 
+        //Guardamos lo que cabe en el primer bloque
         strcat(archivo.b_content,aux.toStdString().c_str());
         fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*blockIndex,SEEK_SET);
         fwrite(&archivo,sizeof(BloqueArchivo),1,fp);
@@ -2358,8 +2377,8 @@ void agregarUsersTXT(QString datos){
         strcpy(auxArchivo.b_content,aux2.toStdString().c_str());
         int bit = buscarBloque(fp,'B',currentSession.fit);
         /*Guardamos el bloque en el bitmap y en la tabla de bloques*/
-        fseek(fp,super.s_bm_block_start + static_cast<int>(sizeof(BloqueArchivo))*bit,SEEK_SET);
-        fputc('1',fp);
+        fseek(fp,super.s_bm_block_start + bit,SEEK_SET);
+        fputc('2',fp);
         fseek(fp,super.s_block_start + (static_cast<int>(sizeof(BloqueArchivo))*bit),SEEK_SET);
         fwrite(&auxArchivo,sizeof(BloqueArchivo),1,fp);
         /*Guardamos el modificado del inodo*/
@@ -2573,7 +2592,7 @@ void eliminarGrupo(QString name){
         if(inodo.i_block[i] != -1){
             fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
             fread(&archivo,sizeof(BloqueArchivo),1,fp);
-            for(int j = 0; j < 64; j++){
+            for(int j = 0; j < 63; j++){
                 actual = archivo.b_content[j];
                 if(actual=='\n'){
                     if(tipo == 'G'){
@@ -2743,7 +2762,7 @@ void eliminarUsuario(QString name){
         if(inodo.i_block[i] != -1){
             fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[i],SEEK_SET);
             fread(&archivo,sizeof(BloqueArchivo),1,fp);
-            for(int j = 0; j < 64; j++){
+            for(int j = 0; j < 63; j++){
                 actual = archivo.b_content[j];
                 if(actual=='\n'){
                     if(tipo == 'U'){

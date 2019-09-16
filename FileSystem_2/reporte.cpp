@@ -229,7 +229,7 @@ void Reporte::graficarMBR(QString direccion, QString destino, QString extension)
 /* Metodo para generar el reporte de inodos de una particion
  * @param QString direccion: Es la direccion donde se encuentra la particion
  * @param QString destino: Es la ruta donde se creara el reporte
- * @param QString extension: La extension que tendra nuestro reporte .jpg|.png|etc
+ * @param QString extension: La extension que tendra el reporte .jpg|.png|etc
  * @param int bm_inode_start: Byte donde inicia el bitmap de inodos de la particion
  * @param int inode_start: Byte donde inicia la tabla de inodos de la particion
  * @param int bm_block_start: Byte donde inicia el bitmap de bloques de la particion
@@ -238,12 +238,13 @@ void Reporte::graficarInodos(QString direccion, QString destino, QString extensi
     FILE *fp = fopen(direccion.toStdString().c_str(), "r");
 
     InodoTable inodo;
+    int aux = bm_inode_start;
+    int i = 0;
     char buffer;
 
     FILE *graph = fopen("grafica.dot","w");
     fprintf(graph,"digraph G{\n\n");
-    int aux = bm_inode_start;
-    int i = 0;
+
     while(aux < bm_block_start){
         fseek(fp,bm_inode_start + i,SEEK_SET);
         buffer = static_cast<char>(fgetc(fp));
@@ -288,15 +289,58 @@ void Reporte::graficarInodos(QString direccion, QString destino, QString extensi
     cout << "Reporte generado con exito " << endl;
 }
 
-void Reporte::graficarBloques(QString direccion, QString destino, QString extension, int bm_inode_start, int inode_start, int bm_block_start){
+/* Metodo para generar el reporte de bloques de una particion
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png|etc
+ * @param int bm_block_start: Byte donde inicia el bitmap de bloques de la particion
+ * @param int block_start: Byte donde inicia la tabla de bloques de la particion
+ * @param int inode_start: Byte donde inicia la tabla de inodos
+*/
+void Reporte::graficarBloques(QString direccion, QString destino, QString extension, int bm_block_start, int block_start, int inode_start){
     FILE *fp = fopen(direccion.toStdString().c_str(),"r");
 
     BloqueCarpeta carpeta;
     BloqueArchivo archivo;
-    BloqueApuntadores apuntador;
+    //BloqueApuntadores apuntador;
+
+    int aux = bm_block_start;
+    int i = 0;
+    char buffer;
 
     FILE *graph = fopen("grafica.dot","w");
     fprintf(graph,"digraph G{\n\n");
+
+    while(aux < inode_start){
+        fseek(fp,bm_block_start + i,SEEK_SET);
+        buffer = static_cast<char>(fgetc(fp));
+        aux++;
+        if(buffer == '1'){
+            fseek(fp,block_start + static_cast<int>(sizeof(BloqueCarpeta))*i,SEEK_SET);
+            fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
+            fprintf(graph, "    subgraph inode_%d{\n",i);
+            fprintf(graph, "    nodo_%d [ shape=none, label=< \n",i);
+            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",i);
+            fprintf(graph, "    <tr> <td> b_name </td> <td> b_inode </td></tr>\n");
+            for(int c = 0;c < 4;c++){
+                fprintf(graph, "    <tr> <td> %s </td> <td> %d </td></tr>\n",carpeta.b_content[c].b_name,carpeta.b_content[c].b_inodo);
+            }
+            fprintf(graph, "    </table>\n");
+            fprintf(graph, "    >]\n");
+            fprintf(graph, "    }\n");
+        }else if(buffer == '2'){
+            fseek(fp,block_start + static_cast<int>(sizeof(BloqueArchivo))*i,SEEK_SET);
+            fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            fprintf(graph, "    subgraph inode_%d{\n",i);
+            fprintf(graph, "    nodo_%d [ shape=none, label=< \n",i);
+            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
+            fprintf(graph, "    <tr> <td colspan=\'2\'> %s </td></tr>\n",archivo.b_content);
+            fprintf(graph, "    </table>\n");
+            fprintf(graph, "    >]\n");
+            fprintf(graph, "    }\n");
+        }
+        i++;
+    }
 
     fprintf(graph,"\n}");
     fclose(graph);
