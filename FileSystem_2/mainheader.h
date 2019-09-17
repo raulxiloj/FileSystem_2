@@ -59,10 +59,15 @@ int buscarGrupo(QString);
 int getID_grp();
 void agregarUsersTXT(QString);
 char getLogicFit(QString,QString);
-int buscarBloque(FILE*,char,char);
+int buscarBit(FILE*,char,char);
 void eliminarGrupo(QString);
 bool buscarUsuario(QString);
 int getID_usr();
 void eliminarUsuario(QString);
+int crearCarpeta(QString, bool);
+bool buscarCarpetaArchivo(FILE*,char*);
+int byteInodoBloque(FILE *,int,char);
+int nuevaCarpeta(FILE*,char,bool,char*);
+bool permisos(int,bool,bool);
 
 #endif // MAINHEADER_H
