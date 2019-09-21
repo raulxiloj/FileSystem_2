@@ -44,12 +44,11 @@ void recorrerCHOWN(Nodo*);
 void recorrerCHGRP(Nodo*);
 void recorrerRECOVERY(Nodo*);
 void recorrerLOSS(Nodo*);
-void crearArchivo(QString);
 void leerComando(char*);
+void crearDisco(QString);
 QString getDirectorio(QString);
 QString getExtension(QString);
 QString getFileName(QString);
-
 void formatearEXT2(int,int,QString);
 void formatearEXT3(int,int,QString);
 int log_in(QString, QString, QString, QString);

@@ -384,14 +384,14 @@ void recorrerMKDISK(Nodo *raiz)
                 MBR masterboot;
                 int total_size = 1024;
                 //Archivo principal
-                crearArchivo(valPath);
+                crearDisco(valPath);
                 //Archivo raid
                 QString auxRaid = getDirectorio(valPath);
                 QString nameRaid = getFileName(valPath);
                 QString valRaid = auxRaid+nameRaid+"_raid.disk";
-                crearArchivo(valRaid);
+                crearDisco(valRaid);
 
-                masterboot.mbr_date_created = time(nullptr);//-------
+                masterboot.mbr_date_created = time(nullptr);
                 masterboot.mbr_disk_signature = static_cast<int>(time(nullptr));
 
                 if(flagUnit){//Si hay parametro unit
@@ -439,12 +439,10 @@ void recorrerMKDISK(Nodo *raiz)
                 fwrite(&masterboot,sizeof(MBR),1,fp2);
                 fclose(fp2);
 
-                cout << endl;
                 cout << "Disco creado con exito" << endl;
             }else{
                 cout << "ERROR Parametro -size no definido " << endl;
             }
-
         }else{
             cout << "<< ERROR Parametro -path  no definido" << endl;
         }
@@ -1044,10 +1042,10 @@ void recorrerEXEC(Nodo *raiz)
 
 /*
  * Metodo que creara el directorio de carpetas hacia el archivo
- * y dara permisos en las carpetas y creara el archivo.
- * @param QString direccion, ruta en donde se creara el archivo
+ * y dara permisos en las carpetas y creara el archivo que simula ser un disco.
+ * @param QString direccion: ruta en donde se creara el archivo
 */
-void crearArchivo(QString direccion){
+void crearDisco(QString direccion){
     QString aux = getDirectorio(direccion);
     string comando = "sudo mkdir -p \'"+aux.toStdString()+"\'";
     system(comando.c_str());
@@ -1498,8 +1496,7 @@ void recorrerMKFILE(Nodo *raiz){
     bool flagCont = false;
     bool flag = false;//Si se repite un valor se activa esta bandera
     /*Variables para obtener los valores de cada nodo*/
-    QString path = "";
-    bool p = false;
+    QString Valpath = "";
 
     for(int i = 0; i < raiz->hijos.count(); i++){
         Nodo n = raiz->hijos.at(i);
@@ -1550,7 +1547,7 @@ void recorrerMKFILE(Nodo *raiz){
     if(!flag){
         if(flagPath){
             if(flag_login){
-                //int result = crearCarpeta(valPath)
+
             }else
                 cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
         }else
