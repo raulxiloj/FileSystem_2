@@ -65,9 +65,9 @@ bool buscarUsuario(QString);
 int getID_usr();
 void eliminarUsuario(QString);
 int crearCarpeta(QString, bool);
-bool buscarCarpetaArchivo(FILE*,char*);
+int buscarCarpetaArchivo(FILE*,char*);
 int byteInodoBloque(FILE *,int,char);
-int nuevaCarpeta(FILE*,char,bool,char*);
+int nuevaCarpeta(FILE*,char,bool,char*,int);
 bool permisos(int,bool,bool);
 
 #endif // MAINHEADER_H
