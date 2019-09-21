@@ -896,13 +896,11 @@ void recorrerREP(Nodo *raiz)
                         string comando2 = "sudo chmod -R 777 \'"+directorio.toStdString()+"\'";
                         system(comando2.c_str());
                         Reporte *r = new Reporte();
-                        if(valName == "mbr"){
+                        if(valName == "mbr")
                             r->graficarMBR(aux->direccion,valPath,ext);
-                            //graficarMBR(aux->direccion,valPath,ext);
-                        }else if(valName == "disk"){
+                        else if(valName == "disk")
                             r->graficarDisco(aux->direccion,valPath,ext);
-                            //graficarDisco(aux->direccion,valPath,ext);
-                        }else if(valName == "inode"){
+                        else if(valName == "inode"){
                             int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
@@ -942,13 +940,64 @@ void recorrerREP(Nodo *raiz)
                             }else{//Logica
                                 int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
-
+                                    EBR extendedBoot;
+                                    SuperBloque super;
+                                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                    fseek(fp,index,SEEK_SET);
+                                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                                    fread(&super,sizeof(SuperBloque),1,fp);
+                                    fclose(fp);
+                                    r->graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
                                 }
                             }
                         }else if(valName == "bm_inode"){
-
+                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){//Primaria|Extendida
+                                MBR masterboot;
+                                SuperBloque super;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fclose(fp);
+                                r->graficarBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                            }else{//Logica
+                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                if(index != -1){
+                                    EBR extendedBoot;
+                                    SuperBloque super;
+                                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                    fseek(fp,index,SEEK_SET);
+                                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                                    fread(&super,sizeof(SuperBloque),1,fp);
+                                    fclose(fp);
+                                     r->graficarBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                                }
+                            }
                         }else if(valName == "bm_block"){
-
+                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){//Primaria|Extendida
+                                MBR masterboot;
+                                SuperBloque super;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fclose(fp);
+                                r->graficarBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                            }else{//Logica
+                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                if(index != -1){
+                                    EBR extendedBoot;
+                                    SuperBloque super;
+                                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                    fseek(fp,index,SEEK_SET);
+                                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                                    fread(&super,sizeof(SuperBloque),1,fp);
+                                    fclose(fp);
+                                    r->graficarBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                                }
+                            }
                         }else if(valName == "tree"){
 
                         }else if(valName == "sb"){

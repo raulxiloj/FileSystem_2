@@ -351,3 +351,36 @@ void Reporte::graficarBloques(QString direccion, QString destino, QString extens
     system(comando.c_str());
     cout << "Reporte generado con exito " << endl;
 }
+
+/* Metodo para generar el reporte de bitmaps de una particion
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param int bm_start: Byte donde inicia el bitmap de la particion
+ * @param int n: numero de bits
+*/
+void Reporte::graficarBM(QString direccion, QString destino, int start_bm, int n){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
+
+    char byte;
+    FILE *report = fopen(destino.toStdString().c_str(),"w+");
+    fseek(report,0,SEEK_SET);
+    int cont = 0;
+
+    for (int i = 0; i < n; i++) {
+        fseek(fp,start_bm + i,SEEK_SET);
+        byte = static_cast<char>(fgetc(fp));
+        if(byte == '0')
+            fprintf(report,"0 ");
+        else
+            fprintf(report,"1 ");
+        if(cont == 19){
+            cont = 0;
+            fprintf(report, "\n");
+        }else
+            cont++;
+    }
+    fclose(report);
+
+    fclose(fp);
+    cout << "Reporte generado con exito " << endl;
+}

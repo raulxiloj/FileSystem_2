@@ -16,6 +16,7 @@ public:
     void graficarDisco(QString, QString, QString);
     void graficarInodos(QString,QString,QString,int,int,int);
     void graficarBloques(QString,QString,QString,int,int,int);
+    void graficarBM(QString, QString, int, int);
 };
 
 #endif // REPORTE_H
