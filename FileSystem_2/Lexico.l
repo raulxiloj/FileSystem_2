@@ -17,7 +17,7 @@ password ({letra}|{entero}|[!$@+*-])+
 cadena "\""[^"\""]*"\""
 extension "."{id}
 diagonal "/"
-ruta ({diagonal}{id})+({diagonal}{id}{extension})
+ruta ({diagonal}{id})*({diagonal}{id}{extension})
 directorio ({diagonal}{id})+
 
 %x COM
