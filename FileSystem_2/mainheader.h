@@ -15,7 +15,6 @@ bool flag_global = true;
 bool flag_login = false;
 
 /* Declaracion de metodos y funciones */
-void imprimirEncabezado();
 void reconocerComando(Nodo*);
 void recorrerMKDISK(Nodo*);
 void recorrerRMDISK(Nodo*);
@@ -64,9 +63,11 @@ bool buscarUsuario(QString);
 int getID_usr();
 void eliminarUsuario(QString);
 int crearCarpeta(QString, bool);
-int buscarCarpetaArchivo(FILE*,char*);
-int byteInodoBloque(FILE *,int,char);
 int nuevaCarpeta(FILE*,char,bool,char*,int);
+int crearArchivo(QString,bool,int,QString);
+int nuevoArchivo(FILE*,char,bool,char*,int,QString,int,char*);
+int buscarCarpetaArchivo(FILE*,char*);
+int byteInodoBloque(FILE*,int,char);
 bool permisos(int,bool,bool);
 
 #endif // MAINHEADER_H
