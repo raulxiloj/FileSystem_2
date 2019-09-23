@@ -2984,7 +2984,7 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
         }
 
         if(libre == 1){
-            bool permissions = permisos(inodo.i_perm,(currentSession.id_user == inodo.i_uid),(currentSession.id_grp == inodo.i_gid));
+            bool permissions = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
             if(permissions || (currentSession.id_user == 1 && currentSession.id_grp == 1) ){
                 char buffer = '1';
                 int bitInodo = buscarBit(stream,'I',fit);
@@ -3043,7 +3043,7 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
                     break;
                 }
             }
-            bool permissions = permisos(inodo.i_perm,(currentSession.id_user == inodo.i_uid),(currentSession.id_grp == inodo.i_gid));
+            bool permissions = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
             if(permissions || (currentSession.id_user == 1 && currentSession.id_grp == 1) ){
                 char buffer = '1';
                 int bitBloque = buscarBit(stream,'B',fit);
@@ -3139,13 +3139,6 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
             return nuevaCarpeta(stream,fit,false,dir,existe);
         }
     }
-
-    return 0;
-}
-
-bool permisos(int permisos, bool flagUser, bool flagGroup){
-
-
 
     return 0;
 }
@@ -3261,7 +3254,8 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
         }
 
         if(libre == 1){
-            if(currentSession.id_user == 1 && currentSession.id_grp == 1){
+            bool permisos = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+            if(permisos || (currentSession.id_user == 1 && currentSession.id_grp == 1)){
                 char buffer = '1';
                 char buffer2 = '2';
                 //Agregamos el archivo al bloque correspondiente
@@ -3598,4 +3592,50 @@ int byteInodoBloque(FILE *stream,int pos, char tipo){
     }else if(tipo == '2')
         return (super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*pos);
     return 0;
+}
+
+/* Funcion para verificar si el usuario actual tiene permisos para crear
+ * una carpeta o archivo en la carpeta padre
+ * @param int permisos = permisos del inodo
+ * @param bool flagUser = bandera que indica si es el propietario de la carpeta padre
+ * @param bool flagGroup = bandera que indica si el usuario actual pertenece al grupo de la carpeta padre
+ * @return true = si tiene permisos | false = no tiene permisos
+*/
+bool permisosDeEscritura(int permisos, bool flagUser, bool flagGroup){
+    string aux = to_string(permisos);
+    int propietario = static_cast<int>(aux[0]);
+    int grupo = static_cast<int>(aux[1]);
+    int otros = static_cast<int>(aux[2]);
+
+    if((propietario == 2 || propietario == 3 || propietario == 6 || propietario || 7) && flagUser)
+        return true;
+    else if((grupo == 2 || grupo == 3 || grupo == 6 || grupo == 7) && flagGroup)
+        return true;
+    else if(otros == 2 || otros == 3 || otros == 6 || otros == 7)
+        return true;
+
+    return false;
+}
+
+/* Funcion para verificar si el usuario actual tiene permisos para leer
+ * una carpeta o archivo en la carpeta padre
+ * @param int permisos = permisos del inodo
+ * @param bool flagUser = bandera que indica si es el propietario de la carpeta padre
+ * @param bool flagGroup = bandera que indica si el usuario actual pertenece al grupo de la carpeta padre
+ * @return true = si tiene permisos | false = no tiene permisos
+*/
+bool permisosDeLectura(int permisos, bool flagUser, bool flagGroup){
+    string aux = to_string(permisos);
+    int propietario = static_cast<int>(aux[0]);
+    int grupo = static_cast<int>(aux[1]);
+    int otros = static_cast<int>(aux[2]);
+
+    if((propietario >= 3) && flagUser)
+        return true;
+    else if((grupo >= 3) && flagGroup)
+        return true;
+    else if(otros >= 3)
+        return true;
+
+    return false;
 }

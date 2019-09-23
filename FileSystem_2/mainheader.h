@@ -68,6 +68,7 @@ int crearArchivo(QString,bool,int,QString);
 int nuevoArchivo(FILE*,char,bool,char*,int,QString,int,char*);
 int buscarCarpetaArchivo(FILE*,char*);
 int byteInodoBloque(FILE*,int,char);
-bool permisos(int,bool,bool);
+bool permisosDeEscritura(int,bool,bool);
+bool permisosDeLectura(int,bool,bool);
 
 #endif // MAINHEADER_H
