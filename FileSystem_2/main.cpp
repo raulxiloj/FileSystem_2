@@ -222,7 +222,7 @@ void reconocerComando(Nodo *raiz)
         break;
     case CAT:
     {
-
+        recorrerCAT(raiz);
     }
         break;
     case REM:
@@ -1569,6 +1569,41 @@ void recorrerMKFILE(Nodo *raiz){
     }
 }
 
+void recorrerCAT(Nodo *raiz){
+   QString path = raiz->hijos.at(0).valor;
+   char auxPath[500];
+   strcpy(auxPath,path.toStdString().c_str());
+   if(flag_login){
+       FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+       int carpeta = buscarCarpetaArchivo(fp,auxPath);
+       if(carpeta != -1){
+           SuperBloque super;
+           InodoTable inodo;
+           string cadena = "";
+           fseek(fp,currentSession.inicioSuper,SEEK_SET);
+           fread(&super,sizeof(SuperBloque),1,fp);
+           fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*carpeta,SEEK_SET);
+           fread(&inodo,sizeof(InodoTable),1,fp);
+           bool permisos = permisosDeLectura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+           if(permisos || (currentSession.id_user == 1 && currentSession.id_grp == 1)){
+               for (int i = 0; i < 12; i++) {
+                   if(inodo.i_block[i] != -1){
+                       BloqueArchivo archivo;
+                       fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                       fread(&archivo,sizeof(BloqueCarpeta),1,fp);
+                       cadena += archivo.b_content;
+                   }
+               }
+               cout << cadena << endl;
+           }else
+               cout << "ERROR el usuario no tiene permisos de lectura" << endl;
+       }else
+           cout << "ERROR no se encuentra el archivo " << path.toStdString() << endl;
+       fclose(fp);
+   }else
+       cout << "ERROR para ejecutar este comando necesita iniciar sesion" << endl;
+}
+
 void recorrerEDIT(Nodo *raiz){
     /*Banderas para verificar cuando venga un parametro*/
     bool flagPath = false;
@@ -2706,7 +2741,7 @@ void eliminarGrupo(QString name){
                 }else if(actual == ','){
                     if(col == 2){
                         id = atoi(palabra.c_str());
-                        posicion = j;
+                        posicion = j-1;
                     }
                     else if(col == 4)
                         tipo = palabra[0];
@@ -3198,6 +3233,7 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
     char directorio[500];
     char nombreCarpeta[80];
     string content = "";
+    string contentSize = "0123456789";
 
     strcpy(copiaPath,path);
     strcpy(directorio,dirname(copiaPath));
@@ -3286,7 +3322,7 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
                     double n = static_cast<double>(finalSize)/static_cast<double>(63);
                     int numBloques = static_cast<int>(ceil(n));
                     int caracteres = finalSize;
-                    int charNum = 0;
+                    size_t charNum = 0;
                     size_t contChar = 0;
                     memset(archivo.b_content,0,sizeof(archivo.b_content));
                     numInodo = buscarCarpetaArchivo(stream,auxPath);
@@ -3324,7 +3360,8 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
                                     archivo.b_content[j] = content[contChar];
                                     contChar++;
                                 }else{
-                                    archivo.b_content[j] = static_cast<char>(charNum);
+                                    cout << charNum << endl;
+                                    archivo.b_content[j] = contentSize[charNum];
                                     charNum++;
                                     if(charNum == 10)
                                         charNum = 0;
@@ -3366,8 +3403,8 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
                     break;
                 }
             }
-            //int permisos
-            if(currentSession.id_user == 1 && currentSession.id_grp == 1){
+            bool permisos = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+            if(permisos || (currentSession.id_user == 1 && currentSession.id_grp == 1)){
                 char buffer = '1';
                 char buffer2 = '2';
                 int bitBloque = buscarBit(stream,'B',fit);
