@@ -252,30 +252,28 @@ void Reporte::graficarInodos(QString direccion, QString destino, QString extensi
         if(buffer == '1'){
             fseek(fp,inode_start + static_cast<int>(sizeof(InodoTable))*i,SEEK_SET);
             fread(&inodo,sizeof(InodoTable),1,fp);
-            fprintf(graph, "    subgraph inode_%d{\n",i);
             fprintf(graph, "    nodo_%d [ shape=none label=<\n",i);
-            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> Inodo %d </td></tr>\n",i);
-            fprintf(graph, "    <tr> <td> i_uid </td> <td> %d </td>  </tr>\n",inodo.i_uid);
-            fprintf(graph, "    <tr> <td> i_gid </td> <td> %d </td>  </tr>\n",inodo.i_gid);
-            fprintf(graph, "    <tr> <td> i_size </td> <td> %d </td> </tr>\n",inodo.i_size);
+            fprintf(graph, "   <table border=\'0\' cellborder=\'1\' cellspacing=\'0\' bgcolor=\"royalblue\">");
+            fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Inodo %d</b> </td></tr>\n",i);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_uid </td> <td bgcolor=\"white\"> %d </td>  </tr>\n",inodo.i_uid);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_gid </td> <td bgcolor=\"white\"> %d </td>  </tr>\n",inodo.i_gid);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_size </td> <td bgcolor=\"white\"> %d </td> </tr>\n",inodo.i_size);
             struct tm *tm;
             char fecha[100];
             tm=localtime(&inodo.i_atime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_atime </td> <td> %s </td>  </tr>\n",fecha);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_atime </td> <td bgcolor=\"white\"> %s </td>  </tr>\n",fecha);
             tm=localtime(&inodo.i_ctime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_ctime </td> <td> %s </td>  </tr>\n",fecha);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_ctime </td> <td bgcolor=\"white\"> %s </td>  </tr>\n",fecha);
             tm=localtime(&inodo.i_mtime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_mtime </td> <td> %s </td></tr>\n",fecha);
-            for(int b = 0; b < 15; b++){
-                fprintf(graph, "    <tr> <td> i_block_%d </td> <td> %d </td></tr>\n",b,inodo.i_block[b]);
-            }
-            fprintf(graph, "    <tr> <td> i_type </td> <td> %c </td>  </tr>\n",inodo.i_type);
-            fprintf(graph, "    <tr> <td> i_perm </td> <td> %d </td>  </tr>\n",inodo.i_perm);
-            fprintf(graph, "    </table>>]\n");
-            fprintf(graph, "    }\n");
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_mtime </td> <td bgcolor=\"white\"> %s </td></tr>\n",fecha);
+            for(int b = 0; b < 15; b++)
+                fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_block_%d </td> <td bgcolor=\"white\"> %d </td> </tr>\n",b,inodo.i_block[b]);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_type </td> <td bgcolor=\"white\"> %c </td> </tr>\n",inodo.i_type);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_perm </td> <td bgcolor=\"white\"> %d </td> </tr>\n",inodo.i_perm);
+            fprintf(graph, "   </table>>]\n");
         }
         i++;
     }
@@ -318,26 +316,21 @@ void Reporte::graficarBloques(QString direccion, QString destino, QString extens
         if(buffer == '1'){
             fseek(fp,block_start + static_cast<int>(sizeof(BloqueCarpeta))*i,SEEK_SET);
             fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
-            fprintf(graph, "    subgraph inode_%d{\n",i);
             fprintf(graph, "    nodo_%d [ shape=none, label=< \n",i);
-            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",i);
-            fprintf(graph, "    <tr> <td> b_name </td> <td> b_inode </td></tr>\n");
-            for(int c = 0;c < 4;c++){
-                fprintf(graph, "    <tr> <td> %s </td> <td> %d </td></tr>\n",carpeta.b_content[c].b_name,carpeta.b_content[c].b_inodo);
-            }
-            fprintf(graph, "    </table>\n");
-            fprintf(graph, "    >]\n");
-            fprintf(graph, "    }\n");
+            fprintf(graph, "   <table border=\'0\' cellborder='1' cellspacing='0' bgcolor=\"seagreen\">");
+            fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",i);
+            fprintf(graph, "    <tr> <td bgcolor=\"mediumseagreen\"> b_name </td> <td bgcolor=\"mediumseagreen\"> b_inode </td></tr>\n");
+            for(int c = 0;c < 4;c++)
+                fprintf(graph, "    <tr> <td bgcolor=\"white\"> %s </td> <td bgcolor=\"white\"> %d </td></tr>\n",carpeta.b_content[c].b_name,carpeta.b_content[c].b_inodo);
+            fprintf(graph, "   </table>>]\n\n");
         }else if(buffer == '2'){
             fseek(fp,block_start + static_cast<int>(sizeof(BloqueArchivo))*i,SEEK_SET);
             fread(&archivo,sizeof(BloqueArchivo),1,fp);
-            fprintf(graph, "    subgraph inode_%d{\n",i);
             fprintf(graph, "    nodo_%d [ shape=none, label=< \n",i);
-            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
-            fprintf(graph, "    <tr> <td colspan=\'2\'> %s </td></tr>\n",archivo.b_content);
-            fprintf(graph, "    </table>\n");
-            fprintf(graph, "    >]\n");
-            fprintf(graph, "    }\n");
+            fprintf(graph, "   <table border=\'0\' cellborder='1' cellspacing='0' bgcolor=\"sandybrown\">");
+            fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
+            fprintf(graph, "    <tr> <td colspan=\'2\' bgcolor=\"white\"> %s </td></tr>\n",archivo.b_content);
+            fprintf(graph, "   </table>>]\n\n");
         }
         i++;
     }
@@ -401,34 +394,33 @@ void Reporte::graficarSuper(QString direccion, QString destino, QString extensio
 
     FILE *graph = fopen("grafica.dot","w");
     fprintf(graph,"digraph G{\n");
-    fprintf(graph, "    subgraph super{\n");
-    fprintf(graph, "    nodo [ shape=none,");
-    fprintf(graph, "    label=< <table> <tr> <td COLSPAN=\'2\'> SUPERBLOQUE </td></tr>\n");
-    fprintf(graph, "    <tr> <td> Nombre </td> <td> Valor </td></tr>\n");
+    fprintf(graph, "    nodo [shape=none, label=<");
+    fprintf(graph, "   <table border=\'0\' cellborder='1\' cellspacing=\'0\' bgcolor=\"gray\">");
+    fprintf(graph, "    <tr> <td COLSPAN=\'2\'> <b>SUPERBLOQUE</b> </td></tr>\n");
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> <b>Nombre</b> </td> <td bgcolor=\"white\"> <b>Valor</b> </td></tr>\n");
     fprintf(graph, "    <tr> <td> s_inodes_count </td> <td> %d </td> </tr>\n",super.s_inodes_count);
-    fprintf(graph, "    <tr> <td> s_blocks_count </td> <td> %d </td> </tr>\n",super.s_blocks_count);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_blocks_count </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_blocks_count);
     fprintf(graph, "    <tr> <td> s_free_block_count </td> <td> %d </td> </tr>\n",super.s_free_blocks_count);
-    fprintf(graph, "    <tr> <td> s_free_inodes_count </td> <td> %d </td> </tr>\n",super.s_free_inodes_count);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_free_inodes_count </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_free_inodes_count);
     struct tm *tm;
     char fecha[100];
     tm=localtime(&super.s_mtime);
     strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-    fprintf(graph, "<tr> <td> s_mtime </td> <td> %s </td></tr>\n",fecha);
+    fprintf(graph, "    <tr> <td> s_mtime </td> <td> %s </td></tr>\n",fecha);
     tm=localtime(&super.s_umtime);
     strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-    fprintf(graph, "    <tr> <td> s_umtime </td> <td> %s </td> </tr>\n",fecha);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_umtime </td> <td bgcolor=\"white\"> %s </td> </tr>\n",fecha);
     fprintf(graph, "    <tr> <td> s_mnt_count </td> <td> %d </td> </tr>\n",super.s_mnt_count);
-    fprintf(graph, "    <tr> <td> s_magic </td> <td> %d </td> </tr>\n",super.s_magic);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_magic </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_magic);
     fprintf(graph, "    <tr> <td> s_inode_size </td> <td> %d </td> </tr>\n",super.s_inode_size);
-    fprintf(graph, "    <tr> <td> s_block_size </td> <td> %d </td> </tr>\n",super.s_block_size);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_block_size </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_block_size);
     fprintf(graph, "    <tr> <td> s_first_ino </td> <td> %d </td> </tr>\n",super.s_first_ino);
-    fprintf(graph, "    <tr> <td> s_first_blo </td> <td> %d </td> </tr>\n",super.s_first_blo);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_first_blo </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_first_blo);
     fprintf(graph, "    <tr> <td> s_bm_inode_start </td> <td> %d </td></tr>\n",super.s_bm_inode_start);
-    fprintf(graph, "    <tr> <td> s_bm_block_start </td> <td> %d </td> </tr>\n",super.s_bm_block_start);
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_bm_block_start </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_bm_block_start);
     fprintf(graph, "    <tr> <td> s_inode_start </td> <td> %d </td> </tr>\n",super.s_inode_start);
-    fprintf(graph, "    <tr> <td> s_block_start </td> <td> %d </td> </tr>\n",super.s_block_start);
-    fprintf(graph, "    </table>>]\n");
-    fprintf(graph, "    }\n");
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"> s_block_start </td> <td bgcolor=\"white\"> %d </td> </tr>\n",super.s_block_start);
+    fprintf(graph, "   </table>>]\n");
     fprintf(graph,"\n}");
     fclose(graph);
 
@@ -464,6 +456,12 @@ void Reporte::graficarPermisos(QString direccion, QString destino, QString exten
     cout << "Reporte SuperBloque generado con exito " << endl;
 }
 
+/* Metodo para generar el reporte del arbol de inodos con bloques de un sistema de archivos
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png
+ * @param int start_super: byte donde inicia el super bloque
+*/
 void Reporte::graficarTree(QString direccion, QString destino, QString extension, int start_super){
     FILE *fp = fopen(direccion.toStdString().c_str(),"r");
 
@@ -477,86 +475,90 @@ void Reporte::graficarTree(QString direccion, QString destino, QString extension
 
     int aux = super.s_bm_inode_start;
     int i = 0;
+
     char buffer;
-    char buffer2;
 
     FILE *graph = fopen("grafica.dot", "w");
     fprintf(graph, "digraph G{\n\n");
     fprintf(graph, "    rankdir=\"LR\" \n");
 
+    //Creamos los inodos
     while(aux < super.s_bm_block_start){
         fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
         buffer = static_cast<char>(fgetc(fp));
         aux++;
-        if(buffer != '1'){
+        int port = 0;
+        if(buffer == '1'){
             fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*i,SEEK_SET);
             fread(&inodo,sizeof(InodoTable),1,fp);
-            fprintf(graph, "    subgraph inode_%d{\n",i);
             fprintf(graph, "    inodo_%d [ shape=none label=<\n",i);
-            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> Inodo %d </td></tr>\n",i);
-            fprintf(graph, "    <tr> <td> i_uid </td> <td> %d </td>  </tr>\n",inodo.i_uid);
-            fprintf(graph, "    <tr> <td> i_gid </td> <td> %d </td>  </tr>\n",inodo.i_gid);
-            fprintf(graph, "    <tr> <td> i_size </td> <td> %d </td> </tr>\n",inodo.i_size);
+            fprintf(graph, "   <table bgcolor=\"royalblue\" border=\'0\'>");
+            fprintf(graph, "    <tr> <td colspan=\'2\'><b>Inodo %d</b></td></tr>\n",i);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_uid </td> <td bgcolor=\"white\"> %d </td>  </tr>\n",inodo.i_uid);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_gid </td> <td bgcolor=\"white\"> %d </td>  </tr>\n",inodo.i_gid);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_size </td><td bgcolor=\"white\"> %d </td> </tr>\n",inodo.i_size);
             struct tm *tm;
             char fecha[100];
             tm=localtime(&inodo.i_atime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_atime </td> <td> %s </td>  </tr>\n",fecha);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_atime </td> <td bgcolor=\"white\"> %s </td>  </tr>\n",fecha);
             tm=localtime(&inodo.i_ctime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_ctime </td> <td> %s </td>  </tr>\n",fecha);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_ctime </td> <td bgcolor=\"white\"> %s </td>  </tr>\n",fecha);
             tm=localtime(&inodo.i_mtime);
             strftime(fecha,100,"%d/%m/%y %H:%S",tm);
-            fprintf(graph, "    <tr> <td> i_mtime </td> <td> %s </td></tr>\n",fecha);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_mtime </td> <td bgcolor=\"white\"> %s </td></tr>\n",fecha);
             for(int b = 0; b < 15; b++){
-                fprintf(graph, "    <tr> <td> i_block_%d </td> <td> %d </td></tr>\n",b,inodo.i_block[b]);
+                fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\"> i_block_%d </td> <td bgcolor=\"white\" port=\"f%d\"> %d </td></tr>\n",port,b,inodo.i_block[b]);
+                port++;
             }
-            fprintf(graph, "    <tr> <td> i_type </td> <td> %c </td>  </tr>\n",inodo.i_type);
-            fprintf(graph, "    <tr> <td> i_perm </td> <td> %d </td>  </tr>\n",inodo.i_perm);
-            fprintf(graph, "    </table>>]\n");
-            fprintf(graph, "    }\n");
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_type </td> <td bgcolor=\"white\"> %c </td>  </tr>\n",inodo.i_type);
+            fprintf(graph, "    <tr> <td bgcolor=\"lightsteelblue\" > i_perm </td> <td bgcolor=\"white\"> %d </td>  </tr>\n",inodo.i_perm);
+            fprintf(graph, "   </table>>]\n\n");
+            //Creamos los bloques relacionados al inodo
             for (int j = 0; j < 15; j++) {
+                port = 0;
                 if(inodo.i_block[j] != -1){
-                    fprintf(graph, "    inodo_%d->bloque_%d;\n",i,inodo.i_block[i]);
                     fseek(fp,super.s_bm_block_start + inodo.i_block[j],SEEK_SET);
-                    buffer2 = static_cast<char>(fgetc(fp));
-                    if(buffer2 == '1'){//Bloque carpeta
-                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*i,SEEK_SET);
+                    buffer = static_cast<char>(fgetc(fp));
+                    if(buffer == '1'){//Bloque carpeta
+                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[j],SEEK_SET);
                         fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
-                        fprintf(graph, "    subgraph bloque_%d{\n",i);
-                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",i);
-                        fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",i);
-                        fprintf(graph, "    <tr> <td> b_name </td> <td> b_inode </td></tr>\n");
+                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",inodo.i_block[j]);
+                        fprintf(graph, "   <table border=\'0\' bgcolor=\"seagreen\"> ");
+                        fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",inodo.i_block[j]);
+                        fprintf(graph, "    <tr> <td bgcolor=\"mediumseagreen\"> b_name </td> <td bgcolor=\"mediumseagreen\"> b_inode </td></tr>\n");
                         for(int c = 0;c < 4; c++){
-                            fprintf(graph, "    <tr> <td> %s </td> <td> %d </td></tr>\n",carpeta.b_content[c].b_name,carpeta.b_content[c].b_inodo);
+                            fprintf(graph, "    <tr> <td bgcolor=\"white\"> %s </td> <td bgcolor=\"white\" port=\"f%d\"> %d </td></tr>\n",carpeta.b_content[c].b_name,port,carpeta.b_content[c].b_inodo);
+                            port++;
                         }
-                        fprintf(graph, "    </table>\n");
-                        fprintf(graph, "    >]\n");
-                        fprintf(graph, "    }\n");
+                        fprintf(graph, "   </table>>]\n\n");
+                        //Relacion de bloques a inodos
                         for(int c = 0; c < 4; c++){
-                            if(carpeta.b_content[c].b_inodo != -1){
+                            if(carpeta.b_content[c].b_inodo !=-1){
                                 if(strcmp(carpeta.b_content[c].b_name,".")!=0 && strcmp(carpeta.b_content[c].b_name,"..")!=0)
-                                    fprintf(graph, "    bloque_%d->inodo_%d;\n",inodo.i_block[i],carpeta.b_content[c].b_inodo);
+                                    fprintf(graph, "    bloque_%d:f%d -> inodo_%d;\n",inodo.i_block[j],c,carpeta.b_content[c].b_inodo);
                             }
                         }
-                    }else if(buffer2 == '2'){//Bloque archivo
-                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*i,SEEK_SET);
-                        fread(&archivo,sizeof(BloqueArchivo),1,fp);
-                        fprintf(graph, "    subgraph bloque_%d{\n",i);
-                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",i);
-                        fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
-                        fprintf(graph, "    <tr> <td colspan=\'2\'> %s </td></tr>\n",archivo.b_content);
-                        fprintf(graph, "    </table>\n");
-                        fprintf(graph, "    >]\n");
-                        fprintf(graph, "    }\n");
-                    }
-                }
 
+                    }else if(buffer == '2'){//Bloque archivo
+                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*inodo.i_block[j],SEEK_SET);
+                        fread(&archivo,sizeof(BloqueArchivo),1,fp);
+                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",inodo.i_block[j]);
+                        fprintf(graph, "   <table border=\'0\' bgcolor=\"sandybrown\">");
+                        fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",inodo.i_block[j]);
+                        fprintf(graph, "    <tr> <td colspan=\'2\' bgcolor=\"white\"> %s </td></tr>\n",archivo.b_content);
+                        fprintf(graph, "   </table>>]\n\n");
+                    }
+                    //Relacion de inodos a bloques
+                    fprintf(graph,"inodo_%d:f%d -> bloque_%d",i,j,inodo.i_block[j]);
+                }
             }
         }
         i++;
     }
-    fprintf(graph,"\n}");
+
+    fprintf(graph,"\n\n}");
     fclose(graph);
 
     fclose(fp);
