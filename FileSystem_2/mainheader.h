@@ -9,7 +9,7 @@
 
 /*Variables globales*/
 ListaMount *lista = new ListaMount();
-Disco *disco = new Disco();
+Disco disco;
 Sesion currentSession;
 bool flag_global = true;
 bool flag_login = false;

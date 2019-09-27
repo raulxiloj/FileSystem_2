@@ -657,25 +657,25 @@ void recorrerFDISK(Nodo *raiz)
                         if(flagType){//Si especifica tipo de particion
                             if(valType == 'P'){
                                 //Archivo principal
-                                disco->crearParticionPrimaria(valPath, valName, valSize, valFit, valUnit,"principal");
+                                disco.crearParticionPrimaria(valPath, valName, valSize, valFit, valUnit,"principal");
                                 //Archivo raid
-                                disco->crearParticionPrimaria(valRaid, valName, valSize, valFit, valUnit,"raid");
+                                disco.crearParticionPrimaria(valRaid, valName, valSize, valFit, valUnit,"raid");
                             }else if(valType == 'E'){
                                 //Archivo principal
-                                disco->crearParticionExtendida(valPath, valName, valSize, valFit, valUnit,"principal");
+                                disco.crearParticionExtendida(valPath, valName, valSize, valFit, valUnit,"principal");
                                 //Archivo raid
-                                disco->crearParticionExtendida(valRaid, valName, valSize, valFit, valUnit,"raid");
+                                disco.crearParticionExtendida(valRaid, valName, valSize, valFit, valUnit,"raid");
                             }else if(valType == 'L'){
                                 //Archivo principal
-                                disco->crearParticionLogica(valPath, valName, valSize, valFit, valUnit,"principal");
+                                disco.crearParticionLogica(valPath, valName, valSize, valFit, valUnit,"principal");
                                 //Archivo raid
-                                disco->crearParticionLogica(valRaid, valName, valSize, valFit, valUnit,"raid");
+                                disco.crearParticionLogica(valRaid, valName, valSize, valFit, valUnit,"raid");
                             }
                         }else{//Si no especifica se considera particion primaria
                             //Archivo principal
-                            disco->crearParticionPrimaria(valPath, valName, valSize, valFit, valUnit,"principal");
+                            disco.crearParticionPrimaria(valPath, valName, valSize, valFit, valUnit,"principal");
                             //Archivo raid
-                            disco->crearParticionPrimaria(valRaid, valName, valSize, valFit, valUnit,"raid");
+                            disco.crearParticionPrimaria(valRaid, valName, valSize, valFit, valUnit,"raid");
                         }
                     }
                 }else if(flagAdd){
@@ -687,9 +687,9 @@ void recorrerFDISK(Nodo *raiz)
                         if(flagUnit){
                             if(!mount){
                                 //Archivo principal
-                                disco->agregarQuitarParticion(valPath, valName, valAdd, valUnit,"principal");
+                                disco.agregarQuitarParticion(valPath, valName, valAdd, valUnit,"principal");
                                 //Archivo raid
-                                disco->agregarQuitarParticion(valRaid, valName, valAdd, valUnit,"raid");
+                                disco.agregarQuitarParticion(valRaid, valName, valAdd, valUnit,"raid");
                             }else
                                 cout << "ERROR desmote primero la particion para poder eliminarlo" << endl;
                         }else{
@@ -703,9 +703,9 @@ void recorrerFDISK(Nodo *raiz)
                         bool mount = lista->buscarNodo(valPath,valName);
                         if(!mount){
                             //Archivo principal
-                            disco->eliminarParticion(valPath, valName, valDelete,"principal");
+                            disco.eliminarParticion(valPath, valName, valDelete,"principal");
                             //Archivo raid
-                            disco->eliminarParticion(valRaid, valName, valDelete,"raid");
+                            disco.eliminarParticion(valRaid, valName, valDelete,"raid");
                         }else
                             cout << "ERROR desmote primero la particion para poder eliminarlo" << endl;
                     }
@@ -760,7 +760,7 @@ void recorrerMOUNT(Nodo *raiz){
     if(!flag){
         if(flagPath){//Parametro obligatorio
             if(flagName){//Parametro obligtaorio
-                int indexP = disco->buscarParticion_P_E(valPath,valName);
+                int indexP = disco.buscarParticion_P_E(valPath,valName);
                 if(indexP != -1){
                     FILE *fp;
                     if((fp = fopen(valPath.toStdString().c_str(),"rb+"))){
@@ -788,7 +788,7 @@ void recorrerMOUNT(Nodo *raiz){
                         cout << "ERROR no se encuentra el disco" << endl;
                     }
                 }else{//Posiblemente logica
-                    int indexP = disco->buscarParticion_L(valPath,valName);
+                    int indexP = disco.buscarParticion_L(valPath,valName);
                     if(indexP != -1){
                         FILE *fp;
                         if((fp = fopen(valPath.toStdString().c_str(), "rb+"))){
@@ -903,13 +903,13 @@ void recorrerREP(Nodo *raiz)
                         system(comando.c_str());
                         string comando2 = "sudo chmod -R 777 \'"+directorio.toStdString()+"\'";
                         system(comando2.c_str());
-                        Reporte *r = new Reporte();
+                        Reporte r;
                         if(valName == "mbr")
-                            r->graficarMBR(aux->direccion,valPath,ext);
+                            r.graficarMBR(aux->direccion,valPath,ext);
                         else if(valName == "disk")
-                            r->graficarDisco(aux->direccion,valPath,ext);
+                            r.graficarDisco(aux->direccion,valPath,ext);
                         else if(valName == "inode"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
                                 SuperBloque super;
@@ -918,9 +918,9 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->graficarInodos(aux->direccion,valPath,ext,super.s_bm_inode_start,super.s_inode_start,super.s_bm_block_start);
+                                r.graficarInodos(aux->direccion,valPath,ext,super.s_bm_inode_start,super.s_inode_start,super.s_bm_block_start);
                             }else{//Logica
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     SuperBloque super;
@@ -929,13 +929,13 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                    r->graficarInodos(aux->direccion,valPath,ext,super.s_bm_inode_start,super.s_inode_start,super.s_bm_block_start);
+                                    r.graficarInodos(aux->direccion,valPath,ext,super.s_bm_inode_start,super.s_inode_start,super.s_bm_block_start);
                                 }
                             }
                         }else if(valName == "journaling"){
 
                         }else if(valName == "block"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
                                 SuperBloque super;
@@ -944,9 +944,9 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
+                                r.graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
                             }else{//Logica
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     SuperBloque super;
@@ -955,11 +955,11 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                    r->graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
+                                    r.graficarBloques(aux->direccion,valPath,ext,super.s_bm_block_start,super.s_block_start,super.s_inode_start);
                                 }
                             }
                         }else if(valName == "bm_inode"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
                                 SuperBloque super;
@@ -968,9 +968,9 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                                r.reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
                             }else{//Logica
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     SuperBloque super;
@@ -979,11 +979,11 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                     r->reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                                     r.reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
                                 }
                             }
                         }else if(valName == "bm_block"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
                                 SuperBloque super;
@@ -992,9 +992,9 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                                r.reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
                             }else{//Logica
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     SuperBloque super;
@@ -1003,20 +1003,20 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                    r->reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                                    r.reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
                                 }
                             }
                         }else if(valName == "tree"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){
                                 MBR masterboot;
                                 FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
                                 fread(&masterboot,sizeof(MBR),1,fp);
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fclose(fp);
-                                r->graficarTree(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
+                                r.graficarTree(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
                             }else{
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
@@ -1024,20 +1024,20 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     int start = static_cast<int>(ftell(fp));
                                     fclose(fp);
-                                    r->graficarTree(aux->direccion,valPath,ext,start);
+                                    r.graficarTree(aux->direccion,valPath,ext,start);
                                 }
                             }
                         }else if(valName == "sb"){
-                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
                                 MBR masterboot;
                                 FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
                                 fread(&masterboot,sizeof(MBR),1,fp);
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fclose(fp);
-                                r->graficarSuper(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
+                                r.graficarSuper(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
                             }else{
-                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                int index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
                                     EBR extendedBoot;
                                     FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
@@ -1045,7 +1045,7 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     int start = static_cast<int>(ftell(fp));
                                     fclose(fp);
-                                    r->graficarSuper(aux->direccion,valPath,ext,start);
+                                    r.graficarSuper(aux->direccion,valPath,ext,start);
                                 }
                             }
                         }else if(valName == "file"){
@@ -1222,7 +1222,7 @@ void recorrerMKFS(Nodo *raiz){
         if(flagID){//Parametro obligatorio
             NodoMount *aux = lista->getNodo(id);
             if(aux!=nullptr){
-                int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                 if(index != -1){
                     MBR masterboot;
                     FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
@@ -1235,7 +1235,7 @@ void recorrerMKFS(Nodo *raiz){
                         formatearEXT2(inicio,tamano,aux->direccion);
                     fclose(fp);
                 }else{
-                    index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                    index = disco.buscarParticion_L(aux->direccion,aux->nombre);
                 }
             }else
                 cout << "ERROR no se encuentra ninguna particion montada con ese id" << endl;
@@ -2307,7 +2307,7 @@ void formatearEXT3(int inicio, int tamano, QString direccion){
  * @return 1 = login exitoso | 2 = contrasena incorrecta | 0 = usuario no encontrado
 */
 int log_in(QString direccion, QString nombre, QString user, QString password){
-    int index = disco->buscarParticion_P_E(direccion,nombre);
+    int index = disco.buscarParticion_P_E(direccion,nombre);
     if(index != -1){
         MBR masterboot;
         SuperBloque super;
@@ -2326,7 +2326,7 @@ int log_in(QString direccion, QString nombre, QString user, QString password){
         currentSession.fit = masterboot.mbr_partition[index].part_fit;
         return verificarDatos(user,password, direccion);
     }else{
-        index = disco->buscarParticion_L(direccion, nombre);
+        index = disco.buscarParticion_L(direccion, nombre);
         if(index != -1){
             SuperBloque super;
             InodoTable inodo;
