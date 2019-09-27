@@ -286,7 +286,7 @@ void Reporte::graficarInodos(QString direccion, QString destino, QString extensi
 
     string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
     system(comando.c_str());
-    cout << "Reporte generado con exito " << endl;
+    cout << "Reporte de inodos generado con exito " << endl;
 }
 
 /* Metodo para generar el reporte de bloques de una particion
@@ -358,7 +358,7 @@ void Reporte::graficarBloques(QString direccion, QString destino, QString extens
  * @param int bm_start: Byte donde inicia el bitmap de la particion
  * @param int n: numero de bits
 */
-void Reporte::graficarBM(QString direccion, QString destino, int start_bm, int n){
+void Reporte::reporteBM(QString direccion, QString destino, int start_bm, int n){
     FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
 
     char byte;
@@ -383,4 +383,185 @@ void Reporte::graficarBM(QString direccion, QString destino, int start_bm, int n
 
     fclose(fp);
     cout << "Reporte generado con exito " << endl;
+}
+
+/* Metodo para generar el reporte del SuperBloque de una particion
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png
+ * @param int start_super: Byte donde inicia el super bloque
+*/
+void Reporte::graficarSuper(QString direccion, QString destino, QString extension, int start_super){
+    FILE* fp = fopen(direccion.toStdString().c_str(),"r");
+
+    SuperBloque super;
+
+    fseek(fp,start_super,SEEK_SET);
+    fread(&super,sizeof (super),1,fp);
+
+    FILE *graph = fopen("grafica.dot","w");
+    fprintf(graph,"digraph G{\n");
+    fprintf(graph, "    subgraph super{\n");
+    fprintf(graph, "    nodo [ shape=none,");
+    fprintf(graph, "    label=< <table> <tr> <td COLSPAN=\'2\'> SUPERBLOQUE </td></tr>\n");
+    fprintf(graph, "    <tr> <td> Nombre </td> <td> Valor </td></tr>\n");
+    fprintf(graph, "    <tr> <td> s_inodes_count </td> <td> %d </td> </tr>\n",super.s_inodes_count);
+    fprintf(graph, "    <tr> <td> s_blocks_count </td> <td> %d </td> </tr>\n",super.s_blocks_count);
+    fprintf(graph, "    <tr> <td> s_free_block_count </td> <td> %d </td> </tr>\n",super.s_free_blocks_count);
+    fprintf(graph, "    <tr> <td> s_free_inodes_count </td> <td> %d </td> </tr>\n",super.s_free_inodes_count);
+    struct tm *tm;
+    char fecha[100];
+    tm=localtime(&super.s_mtime);
+    strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+    fprintf(graph, "<tr> <td> s_mtime </td> <td> %s </td></tr>\n",fecha);
+    tm=localtime(&super.s_umtime);
+    strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+    fprintf(graph, "    <tr> <td> s_umtime </td> <td> %s </td> </tr>\n",fecha);
+    fprintf(graph, "    <tr> <td> s_mnt_count </td> <td> %d </td> </tr>\n",super.s_mnt_count);
+    fprintf(graph, "    <tr> <td> s_magic </td> <td> %d </td> </tr>\n",super.s_magic);
+    fprintf(graph, "    <tr> <td> s_inode_size </td> <td> %d </td> </tr>\n",super.s_inode_size);
+    fprintf(graph, "    <tr> <td> s_block_size </td> <td> %d </td> </tr>\n",super.s_block_size);
+    fprintf(graph, "    <tr> <td> s_first_ino </td> <td> %d </td> </tr>\n",super.s_first_ino);
+    fprintf(graph, "    <tr> <td> s_first_blo </td> <td> %d </td> </tr>\n",super.s_first_blo);
+    fprintf(graph, "    <tr> <td> s_bm_inode_start </td> <td> %d </td></tr>\n",super.s_bm_inode_start);
+    fprintf(graph, "    <tr> <td> s_bm_block_start </td> <td> %d </td> </tr>\n",super.s_bm_block_start);
+    fprintf(graph, "    <tr> <td> s_inode_start </td> <td> %d </td> </tr>\n",super.s_inode_start);
+    fprintf(graph, "    <tr> <td> s_block_start </td> <td> %d </td> </tr>\n",super.s_block_start);
+    fprintf(graph, "    </table>>]\n");
+    fprintf(graph, "    }\n");
+    fprintf(graph,"\n}");
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte SuperBloque generado con exito " << endl;
+}
+
+/* Metodo para generar el reporte de permisos de un archivo/carpeta
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png
+ * @param QString file: nombre del archivo/carpeta
+ * @param int n: numero inodo del archivo/carpeta
+*/
+void Reporte::graficarPermisos(QString direccion, QString destino, QString extension, QString file,int n){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
+
+    FILE *graph = fopen("grafica.dot","w");
+    fprintf(graph,"digraph G{\n\n");
+    fprintf(graph, "nodo [ shape=none,");
+    fprintf(graph, "label=< <table>\n");
+    fprintf(graph,"<tr> <td>PERMISOS</td><td>OWNER</td><td>GRUPO</td><td>SIZE</td><td>FECHA</td><td>HORA</td><td>TIPO</td><td>NAME</td></tr>\n");
+
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte SuperBloque generado con exito " << endl;
+}
+
+void Reporte::graficarTree(QString direccion, QString destino, QString extension, int start_super){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"r");
+
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueCarpeta carpeta;
+    BloqueArchivo archivo;
+
+    fseek(fp,start_super,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+
+    int aux = super.s_bm_inode_start;
+    int i = 0;
+    char buffer;
+    char buffer2;
+
+    FILE *graph = fopen("grafica.dot", "w");
+    fprintf(graph, "digraph G{\n\n");
+    fprintf(graph, "    rankdir=\"LR\" \n");
+
+    while(aux < super.s_bm_block_start){
+        fseek(fp,super.s_bm_inode_start + i,SEEK_SET);
+        buffer = static_cast<char>(fgetc(fp));
+        aux++;
+        if(buffer != '1'){
+            fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*i,SEEK_SET);
+            fread(&inodo,sizeof(InodoTable),1,fp);
+            fprintf(graph, "    subgraph inode_%d{\n",i);
+            fprintf(graph, "    inodo_%d [ shape=none label=<\n",i);
+            fprintf(graph, "    <table> <tr> <td colspan=\'2\'> Inodo %d </td></tr>\n",i);
+            fprintf(graph, "    <tr> <td> i_uid </td> <td> %d </td>  </tr>\n",inodo.i_uid);
+            fprintf(graph, "    <tr> <td> i_gid </td> <td> %d </td>  </tr>\n",inodo.i_gid);
+            fprintf(graph, "    <tr> <td> i_size </td> <td> %d </td> </tr>\n",inodo.i_size);
+            struct tm *tm;
+            char fecha[100];
+            tm=localtime(&inodo.i_atime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_atime </td> <td> %s </td>  </tr>\n",fecha);
+            tm=localtime(&inodo.i_ctime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_ctime </td> <td> %s </td>  </tr>\n",fecha);
+            tm=localtime(&inodo.i_mtime);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph, "    <tr> <td> i_mtime </td> <td> %s </td></tr>\n",fecha);
+            for(int b = 0; b < 15; b++){
+                fprintf(graph, "    <tr> <td> i_block_%d </td> <td> %d </td></tr>\n",b,inodo.i_block[b]);
+            }
+            fprintf(graph, "    <tr> <td> i_type </td> <td> %c </td>  </tr>\n",inodo.i_type);
+            fprintf(graph, "    <tr> <td> i_perm </td> <td> %d </td>  </tr>\n",inodo.i_perm);
+            fprintf(graph, "    </table>>]\n");
+            fprintf(graph, "    }\n");
+            for (int j = 0; j < 15; j++) {
+                if(inodo.i_block[j] != -1){
+                    fprintf(graph, "    inodo_%d->bloque_%d;\n",i,inodo.i_block[i]);
+                    fseek(fp,super.s_bm_block_start + inodo.i_block[j],SEEK_SET);
+                    buffer2 = static_cast<char>(fgetc(fp));
+                    if(buffer2 == '1'){//Bloque carpeta
+                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*i,SEEK_SET);
+                        fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
+                        fprintf(graph, "    subgraph bloque_%d{\n",i);
+                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",i);
+                        fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Carpeta %d</b> </td></tr>\n",i);
+                        fprintf(graph, "    <tr> <td> b_name </td> <td> b_inode </td></tr>\n");
+                        for(int c = 0;c < 4; c++){
+                            fprintf(graph, "    <tr> <td> %s </td> <td> %d </td></tr>\n",carpeta.b_content[c].b_name,carpeta.b_content[c].b_inodo);
+                        }
+                        fprintf(graph, "    </table>\n");
+                        fprintf(graph, "    >]\n");
+                        fprintf(graph, "    }\n");
+                        for(int c = 0; c < 4; c++){
+                            if(carpeta.b_content[c].b_inodo != -1){
+                                if(strcmp(carpeta.b_content[c].b_name,".")!=0 && strcmp(carpeta.b_content[c].b_name,"..")!=0)
+                                    fprintf(graph, "    bloque_%d->inodo_%d;\n",inodo.i_block[i],carpeta.b_content[c].b_inodo);
+                            }
+                        }
+                    }else if(buffer2 == '2'){//Bloque archivo
+                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueArchivo))*i,SEEK_SET);
+                        fread(&archivo,sizeof(BloqueArchivo),1,fp);
+                        fprintf(graph, "    subgraph bloque_%d{\n",i);
+                        fprintf(graph, "    bloque_%d [ shape=none, label=< \n",i);
+                        fprintf(graph, "    <table> <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
+                        fprintf(graph, "    <tr> <td colspan=\'2\'> %s </td></tr>\n",archivo.b_content);
+                        fprintf(graph, "    </table>\n");
+                        fprintf(graph, "    >]\n");
+                        fprintf(graph, "    }\n");
+                    }
+                }
+
+            }
+        }
+        i++;
+    }
+    fprintf(graph,"\n}");
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte Tree generado con exito " << endl;
 }

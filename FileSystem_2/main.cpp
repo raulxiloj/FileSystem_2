@@ -227,7 +227,7 @@ void reconocerComando(Nodo *raiz)
         break;
     case REM:
     {
-
+        recorrerREM(raiz);
     }
         break;
     case EDIT:
@@ -968,7 +968,7 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->graficarBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                                r->reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
                             }else{//Logica
                                 int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
@@ -979,7 +979,7 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                     r->graficarBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
+                                     r->reporteBM(aux->direccion,valPath,super.s_bm_inode_start,super.s_inodes_count);
                                 }
                             }
                         }else if(valName == "bm_block"){
@@ -992,7 +992,7 @@ void recorrerREP(Nodo *raiz)
                                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                                 fread(&super,sizeof(SuperBloque),1,fp);
                                 fclose(fp);
-                                r->graficarBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                                r->reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
                             }else{//Logica
                                 int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
                                 if(index != -1){
@@ -1003,13 +1003,51 @@ void recorrerREP(Nodo *raiz)
                                     fread(&extendedBoot,sizeof(EBR),1,fp);
                                     fread(&super,sizeof(SuperBloque),1,fp);
                                     fclose(fp);
-                                    r->graficarBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
+                                    r->reporteBM(aux->direccion,valPath,super.s_bm_block_start,super.s_blocks_count);
                                 }
                             }
                         }else if(valName == "tree"){
-
+                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){
+                                MBR masterboot;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fclose(fp);
+                                r->graficarTree(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
+                            }else{
+                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                if(index != -1){
+                                    EBR extendedBoot;
+                                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                    fseek(fp,index,SEEK_SET);
+                                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                                    int start = static_cast<int>(ftell(fp));
+                                    fclose(fp);
+                                    r->graficarTree(aux->direccion,valPath,ext,start);
+                                }
+                            }
                         }else if(valName == "sb"){
-
+                            int index = disco->buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){//Primaria|Extendida
+                                MBR masterboot;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fclose(fp);
+                                r->graficarSuper(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
+                            }else{
+                                int index = disco->buscarParticion_L(aux->direccion,aux->nombre);
+                                if(index != -1){
+                                    EBR extendedBoot;
+                                    FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                    fseek(fp,index,SEEK_SET);
+                                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                                    int start = static_cast<int>(ftell(fp));
+                                    fclose(fp);
+                                    r->graficarSuper(aux->direccion,valPath,ext,start);
+                                }
+                            }
                         }else if(valName == "file"){
 
                         }else if(valName == "ls"){
@@ -1552,18 +1590,24 @@ void recorrerMKFILE(Nodo *raiz){
 
     if(!flag){
         if(flagPath){
-            if(flag_login){
-                int result = crearArchivo(valPath,flagP,valSize,valCont);
-                if(result == 1){
-                    cout << "Archivo creado con exito" << endl;
-                }else if(result == 2)
-                    cout << "2" << endl;
-                else if(result == 3)
-                    cout << "3" << endl;
-                else if(result == 4)
-                    cout << "4" << endl;
+            QFileInfo fileName(valPath);
+            QString name = fileName.fileName();
+            if(name.length() <= 11){
+                if(flag_login){
+                    int result = crearArchivo(valPath,flagP,valSize,valCont);
+                    if(result == 1){
+                        cout << "Archivo creado con exito" << endl;
+                    }else if(result == 2)
+                        cout << "2" << endl;
+                    else if(result == 3)
+                        cout << "3" << endl;
+                    else if(result == 4)
+                        cout << "4" << endl;
+                }else
+                    cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
             }else
-                cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
+                cout << "ERROR el nombre del archivo es mas grande de lo esperado" << endl;
+
         }else
             cout << "ERROR parametro -path no definido" << endl;
     }
@@ -1602,6 +1646,45 @@ void recorrerCAT(Nodo *raiz){
        fclose(fp);
    }else
        cout << "ERROR para ejecutar este comando necesita iniciar sesion" << endl;
+}
+
+void recorrerREM(Nodo *raiz){
+    QString path = raiz->hijos.at(0).valor;
+    char auxPath[500];
+    strcpy(auxPath,path.toStdString().c_str());
+    if(flag_login){
+        FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+        int existe = buscarCarpetaArchivo(fp,auxPath);
+        strcpy(auxPath,path.toStdString().c_str());
+        if(existe != -1){
+            bool permisos = permisosEscrituraRecursivo(fp,existe);
+            if(permisos){
+                SuperBloque super;
+                BloqueCarpeta carpeta;
+                int bloque = 0;
+                int posicion = 0;
+
+                fseek(fp,currentSession.inicioSuper,SEEK_SET);
+                fread(&super,sizeof(SuperBloque),1,fp);
+
+                bloqueCarpetaArchivo(fp,auxPath,bloque,posicion);
+
+                //Eliminar la carpeta/archivo del bloque carpeta
+                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+                fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
+                memset(carpeta.b_content[posicion].b_name,0,sizeof(carpeta.b_content[posicion].b_name));
+                carpeta.b_content[posicion].b_inodo = -1;
+                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+                fwrite(&carpeta,sizeof(BloqueCarpeta),1,fp);
+
+                eliminarCarpetaArchivo(fp,existe);
+            }else
+                cout << "ERROR alguna carpeta hija no posee permisos de escritura" << endl;
+        }else
+            cout << "ERROR no se encuentra la direccion" << endl;
+        fclose(fp);
+    }else
+        cout << "ERROR para ejecutar este comando necesita iniciar sesion" << endl;
 }
 
 void recorrerEDIT(Nodo *raiz){
@@ -1730,19 +1813,24 @@ void recorrerMKDIR(Nodo *raiz){
 
     if(!flag){
         if(flagPath){
-            if(flag_login){
-                int result = crearCarpeta(valPath,valP);
-                if(result == 0)
-                    cout << "La carpeta ya existe" << endl;
-                else if(result == 1){
-                    cout << "Carpeta creada con exito" << endl;
-                }else if(result == 2)
-                    cout << "No se tienen permisos de escritura" << endl;
-                else if(result == 3){
+            QFileInfo fileName(valPath);
+            QString name = fileName.fileName();
+            if(name.length() <= 11){
+                if(flag_login){
+                    int result = crearCarpeta(valPath,valP);
+                    if(result == 0)
+                        cout << "La carpeta ya existe" << endl;
+                    else if(result == 1){
+                        cout << "Carpeta creada con exito" << endl;
+                    }else if(result == 2)
+                        cout << "No se tienen permisos de escritura" << endl;
+                    else if(result == 3){
 
-                }
+                    }
+                }else
+                    cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
             }else
-                cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
+                cout << "ERROR el nombre de la carpeta es mas grande de lo esperado" << endl;
         }else
             cout << "ERROR parametro -path no definido" << endl;
     }
@@ -2936,6 +3024,7 @@ void eliminarUsuario(QString name){
  * @return 0 = ya existe
  *       | 1 = carpeta creada exitosamente
  *       | 2 = error por permisos
+ *       | 3 = no existe el directorio y no esta el parametro -p
 */
 int crearCarpeta(QString path, bool p){
     FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
@@ -2987,6 +3076,7 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
     char *token = strtok(path,"/");
     int cont = 0;
     int numInodo = index;
+    int response = 0;
 
     while(token != nullptr){
         cont++;
@@ -3160,7 +3250,7 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
                     strcpy(auxDir,aux.c_str());
                     int carpeta = buscarCarpetaArchivo(stream,dir);
                     if(carpeta == -1){
-                        nuevaCarpeta(stream,fit,false,auxDir,index);
+                        response = nuevaCarpeta(stream,fit,false,auxDir,index);
                         strcpy(auxDir,aux.c_str());
                         index = buscarCarpetaArchivo(stream,auxDir);
                     }else
@@ -3175,7 +3265,7 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
         }
     }
 
-    return 0;
+    return response;
 }
 
 /* Funcion para crear un archivo
@@ -3219,7 +3309,7 @@ int crearArchivo(QString path, bool p, int size, QString cont){
  * @param int size: Tamano en bytes del archivo
  * @param QString cont:
  * @return 0 = ya existe
- *       | 1 = carpeta creada exitosamente
+ *       | 1 = archivo creado exitosamente
  *       | 2 = error por permisos
  *       | 3 = error archivo contenido no existe
  *       | 4 = error no existe el la ruta y no esta el parametro -p
@@ -3442,7 +3532,7 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
                 fwrite(&inodoNuevo,sizeof(InodoTable),1,stream);
                 //Registramos el inodo en el bitmap
                 fseek(stream,super.s_bm_inode_start + bitInodo,SEEK_SET);
-                fwrite(&buffer2,sizeof(char),1,stream);
+                fwrite(&buffer,sizeof(char),1,stream);
                 //Si viene el parametro -size/-cont
                 if(finalSize != 0){
                     BloqueArchivo archivo;
@@ -3561,10 +3651,74 @@ int nuevoArchivo(FILE *stream, char fit, bool flagP, char *path, int size, QStri
     return 0;
 }
 
+/* Metodo para eliminar una carpeta o archivo
+ * @param FILE *stream: Fichero donde se esta leyendo actualmente
+ * @param int n: Numero de inodo de la carpeta/archivo
+*/
+void eliminarCarpetaArchivo(FILE *stream, int n){
+    SuperBloque super;
+    InodoTable inodo;
+    char buffer = '0';
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+
+    //Eliminar el inodo de la carpeta/archivo y sus posibles subcarpetas o archivos
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+
+    if(inodo.i_type == '0'){//Carpeta
+        for (int i = 0; i < 12; i++) {
+            if(inodo.i_block[i] != -1){
+                char byte = '0';
+                fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+                byte = static_cast<char>(fgetc(stream));
+                if(byte == '1'){
+                    BloqueCarpeta carpeta;
+                    fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta)),SEEK_SET);
+                    fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                    for (int j = 0; j < 4; j++) {
+                        if(carpeta.b_content[j].b_inodo != -1){
+                            if(strcmp(carpeta.b_content[j].b_name,".")!=0 && strcmp(carpeta.b_content[j].b_name,"..")!=0)
+                                eliminarCarpetaArchivo(stream,carpeta.b_content[j].b_inodo);
+                        }
+                    }
+                }else if(byte == '2'){
+                    //Eliminar bloques del bitmap
+                    for (int i = 0; i < 12; i++) {
+                        if(inodo.i_block[i] != -1){
+                            fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+                            fputc(buffer,stream);
+                        }
+                    }
+                }
+                //Eliminar inodo del bitmap
+                fseek(stream,super.s_bm_inode_start + n,SEEK_SET);
+                fputc(buffer,stream);
+            }
+        }
+        //Eliminar inodo del bitmap
+        fseek(stream,super.s_bm_inode_start + n,SEEK_SET);
+        fputc(buffer,stream);
+    }else{//Archivo
+        //Eliminar bloques del bitmap
+        for (int i = 0; i < 12; i++) {
+            if(inodo.i_block[i] != -1){
+                fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+                fputc(buffer,stream);
+            }
+        }
+        //Eliminar inodo del bitmap
+        fseek(stream,super.s_bm_inode_start + n,SEEK_SET);
+        fputc(buffer,stream);
+    }
+
+}
+
 /* Funcion para verificar la existencia de una carpeta o archivo
  * @param FILE *stream = Archivo en el cual se encuentra la particion
  * @param char* path = direccion de la carpeta o archivo
- * @return el numero de inodo en el que se encuentra
+ * @return el numero de inodo en el que se encuentra la carpeta o archivo | -1 si no existe
 */
 int buscarCarpetaArchivo(FILE *stream, char* path){
     SuperBloque super;
@@ -3574,7 +3728,6 @@ int buscarCarpetaArchivo(FILE *stream, char* path){
     QList<string> lista = QList<string>();
     char *token = strtok(path,"/");
     int cont = 0;
-    int cont2 = 0;
     int numInodo = 0;
 
     while(token != nullptr){
@@ -3584,10 +3737,10 @@ int buscarCarpetaArchivo(FILE *stream, char* path){
     }
 
     fseek(stream,currentSession.inicioSuper,SEEK_SET);
-    fread(&super,sizeof(SuperBloque),1,stream);\
+    fread(&super,sizeof(SuperBloque),1,stream);
     numInodo = super.s_inode_start;//Inodo 0 '/'
 
-    for (cont2 = 0; cont2 < cont; cont2++) {
+    for (int cont2 = 0; cont2 < cont; cont2++) {
         fseek(stream,numInodo,SEEK_SET);
         fread(&inodo,sizeof(InodoTable),1,stream);
         int siguiente = 0;
@@ -3612,6 +3765,61 @@ int buscarCarpetaArchivo(FILE *stream, char* path){
     }
 
     return -1;
+}
+
+/* Metodo para obtener el bloque y la posicion en el bloque donde se encuentra la carpeta/archivo
+ * @param FILE *stream = Archivo en el cual se encuentra la particion
+ * @param char* path = direccion de la carpeta o archivo
+ * @param int &block = Variable donde se almacenara el bloque donde se encuentra la carpeta/archivo
+ * @param int &posicion = Variable donde se almacenara la posicion en el bloque donde se encuentra la carpeta/archivo
+ * Los ultimos dos parametros son por referencia porque se modificara su valor
+*/
+void bloqueCarpetaArchivo(FILE *stream, char* path, int &block, int &posicion){
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueCarpeta carpeta;
+
+    QList<string> lista = QList<string>();
+    char *token = strtok(path,"/");
+    int cont = 0;
+    int numInodo = 0;
+
+    while(token != nullptr){
+        lista.append(token);
+        cont++;
+        token = strtok(nullptr,"/");
+    }
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+    numInodo = super.s_inode_start;//Inodo 0 '/'
+
+    for (int cont2 = 0; cont2 < cont; cont2++) {
+        fseek(stream,numInodo,SEEK_SET);
+        fread(&inodo,sizeof(InodoTable),1,stream);
+        int siguiente = 0;
+        for(int i = 0; i < 12; i++){
+            if(inodo.i_block[i] != -1){
+                int byteBloque = byteInodoBloque(stream,inodo.i_block[i],'2');
+                fseek(stream,byteBloque,SEEK_SET);
+                fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                for (int j = 0; j < 4; j++) {
+                    if((cont2 == cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){//Tendria que ser la carpeta
+                        block = inodo.i_block[i];
+                        posicion = j;
+                    }else if((cont2 != cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){
+                        numInodo = byteInodoBloque(stream,carpeta.b_content[j].b_inodo,'1');
+                        siguiente = 1;
+                        break;
+                    }
+                }
+                if(siguiente == 1)
+                    break;
+            }
+        }
+    }
+
+
 }
 
 /* Funcion que retorna el byte donde inicia un bloque o inodo
@@ -3676,3 +3884,55 @@ bool permisosDeLectura(int permisos, bool flagUser, bool flagGroup){
 
     return false;
 }
+
+/* Funcion para verificar si el usuario actual tiene permisos para leer
+ * una carpeta o archivo en la carpeta padre
+ * @param int permisos = permisos del inodo
+ * @param bool flagUser = bandera que indica si es el propietario de la carpeta padre
+ * @param bool flagGroup = bandera que indica si el usuario actual pertenece al grupo de la carpeta padre
+ * @return true = si tiene permisos | false = no tiene permisos
+*/
+bool permisosEscrituraRecursivo(FILE* stream, int n){
+    SuperBloque super;
+    InodoTable inodo;
+    bool response = false;
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+
+    bool permisos = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+    if(permisos){
+        if(inodo.i_type == '0'){//carpeta
+            for (int i = 0; i < 12; i++) {
+                if(inodo.i_block[i] != -1){
+                    char byte = '0';
+                    fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+                    byte = static_cast<char>(fgetc(stream));
+                    if(byte == '1'){//Carpeta
+                        BloqueCarpeta carpeta;
+                        fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                        fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                        for (int j = 0; j < 4; j++) {
+                            if(carpeta.b_content[j].b_inodo != -1){
+                                if(strcmp(carpeta.b_content[j].b_name,".")!=0 && strcmp(carpeta.b_content[j].b_name,"..")!=0)
+                                    response = permisosEscrituraRecursivo(stream,carpeta.b_content[j].b_inodo);
+                            }
+                        }
+                    }else{//Archivo
+                        InodoTable inodoAux;
+                        fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*inodo.i_block[i],SEEK_SET);
+                        fread(&inodoAux,sizeof(InodoTable),1,stream);
+                        response = permisosDeEscritura(inodoAux.i_perm,(inodoAux.i_uid == currentSession.id_user),(inodoAux.i_gid == currentSession.id_grp));
+                    }
+                }
+            }
+        }else //archivo
+            return  true;
+    }else
+        return false;
+
+    return response;
+}
+
