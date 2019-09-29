@@ -419,7 +419,8 @@ PARAM_MKUSR: usr igual identificador { $$ = new Nodo("user",$3); }
              | pwd igual identificador { $$ = new Nodo("password", $3); }
              | pwd igual password { $$ = new Nodo("password", $3); }
              | pwd igual cadena { $$ = new Nodo("password",$3); }
-             | grp igual identificador { $$ = new Nodo("group", $3); };
+             | grp igual identificador { $$ = new Nodo("group", $3); }
+             | grp igual cadena { $$ = new Nodo("group",$3); };
 
 RMUSR: rmusr usr igual identificador {
                                         $$ = new Nodo("RMUSR","");
@@ -483,7 +484,12 @@ REM: rem path igual ruta{
                                $$ = new Nodo("REM","");
                                Nodo *n = new Nodo("path",$4);
                                $$->add(*n);
-                            };
+                            }
+     | rem path igual directorio{
+                                  $$ = new Nodo("REM","");
+                                  Nodo *n = new Nodo("path",$4);
+                                  $$->add(*n);
+                                };
 
 EDIT: EDIT PARAM_EDIT {
                         $$ = $1;
