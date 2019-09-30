@@ -75,5 +75,8 @@ bool permisosEscrituraRecursivo(FILE*,int);
 bool permisosLecturaRecursivo(FILE*,int);
 void eliminarCarpetaArchivo(FILE*,int);
 void moverCarpetaArchivo(FILE*,int,char*,int);
+void guardarJournal(char*,int,int,char*,char*);
+void systemLoss();
+void systemRecovery();
 
 #endif // MAINHEADER_H

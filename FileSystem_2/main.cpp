@@ -288,11 +288,10 @@ void reconocerComando(Nodo *raiz)
         break;
     case LOSS:
     {
-
+        systemLoss();
     }
         break;
     default: printf("ERROR no se reconoce el comando");
-
     }
 
 }
@@ -932,7 +931,19 @@ void recorrerREP(Nodo *raiz)
                                 }
                             }
                         }else if(valName == "journaling"){
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){//Primaria|Extendida
+                                MBR masterboot;
+                                SuperBloque super;
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fclose(fp);
+                                r.graficarJournaling(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start);
+                            }else{//Logica
 
+                            }
                         }else if(valName == "block"){
                             int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){//Primaria|Extendida
@@ -1597,6 +1608,21 @@ void recorrerMKFILE(Nodo *raiz){
                 if(flag_login){
                     int result = crearArchivo(valPath,flagP,valSize,valCont);
                     if(result == 1){
+                        if(currentSession.tipo_sistema == 3){
+                            char aux[500];
+                            char operacion[8];
+                            char content[500];
+                            strcpy(aux,valPath.toStdString().c_str());
+                            strcpy(operacion,"mkfile");
+                            strcpy(content,valCont.toStdString().c_str());
+                            if(valCont.length() != 0)
+                                guardarJournal(operacion,0,664,aux,content);
+                            else{
+                                strcpy(content,to_string(valSize).c_str());
+                                guardarJournal(operacion,0,664,aux,content);
+                            }
+
+                        }
                         cout << "Archivo creado con exito" << endl;
                     }else if(result == 2)
                         cout << "ERROR el usuario actual no tiene permisos de escritura" << endl;
@@ -1818,20 +1844,29 @@ void recorrerMKDIR(Nodo *raiz){
                 if(flag_login){
                     int result = crearCarpeta(valPath,valP);
                     if(result == 0)
-                        cout << "La carpeta ya existe" << endl;
+                        cout << "ERROR: La carpeta ya existe" << endl;
                     else if(result == 1){
+                        if(currentSession.tipo_sistema == 3){
+                            char aux[500];
+                            char operacion[8];
+                            char content[5];
+                            strcpy(aux,valPath.toStdString().c_str());
+                            strcpy(operacion,"mkdir");
+                            strcpy(content,"null");
+                            guardarJournal(operacion,1,664,aux,content);
+                        }
                         cout << "Carpeta creada con exito" << endl;
                     }else if(result == 2)
-                        cout << "No se tienen permisos de escritura" << endl;
+                        cout << "ERROR: No se tienen permisos de escritura" << endl;
                     else if(result == 3){
-
+                        cout << "ERROR: No existe el directorio y no esta el parametro -p" << endl;
                     }
                 }else
-                    cout << "ERROR necesita iniciar sesion para poder ejecutar este comando" << endl;
+                    cout << "ERROR: necesita iniciar sesion para poder ejecutar este comando" << endl;
             }else
-                cout << "ERROR el nombre de la carpeta es mas grande de lo esperado" << endl;
+                cout << "ERROR: el nombre de la carpeta es mas grande de lo esperado" << endl;
         }else
-            cout << "ERROR parametro -path no definido" << endl;
+            cout << "ERROR: parametro -path no definido" << endl;
     }
 }
 
@@ -1920,38 +1955,40 @@ void recorrerMV(Nodo *raiz){
     if(!flag){
         if(flagPath){
             if(flagDest){
-                FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
-                char auxPath[500];
-                char auxDest[500];
-                strcpy(auxPath,valPath.toStdString().c_str());
-                strcpy(auxDest,valDest.toStdString().c_str());
-                int carpeta = buscarCarpetaArchivo(fp,auxPath);//Carpeta/archivo a mover
-                int destino = buscarCarpetaArchivo(fp,auxDest);
-                if(carpeta != -1){
-                    if(destino != -1){
-                        bool permisos = permisosLecturaRecursivo(fp,carpeta);
-                        if(permisos){
-                            SuperBloque super;
-                            InodoTable inodo;
-                            fseek(fp,currentSession.inicioSuper,SEEK_SET);
-                            fread(&super,sizeof(SuperBloque),1,fp);
-                            fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*destino,SEEK_SET);
-                            fread(&inodo,sizeof(InodoTable),1,fp);
-                            bool permisos2 = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
-                            if(permisos2){
-                                char auxP[500];
-                                strcpy(auxP,valPath.toStdString().c_str());
-                                moverCarpetaArchivo(fp,carpeta,auxP,destino);
+                if(flag_login){
+                    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+                    char auxPath[500];
+                    char auxDest[500];
+                    strcpy(auxPath,valPath.toStdString().c_str());
+                    strcpy(auxDest,valDest.toStdString().c_str());
+                    int carpeta = buscarCarpetaArchivo(fp,auxPath);//Carpeta/archivo a mover
+                    int destino = buscarCarpetaArchivo(fp,auxDest);
+                    if(carpeta != -1){
+                        if(destino != -1){
+                            bool permisos = permisosLecturaRecursivo(fp,carpeta);
+                            if(permisos){
+                                SuperBloque super;
+                                InodoTable inodo;
+                                fseek(fp,currentSession.inicioSuper,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*destino,SEEK_SET);
+                                fread(&inodo,sizeof(InodoTable),1,fp);
+                                bool permisos2 = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+                                if(permisos2){
+                                    char auxP[500];
+                                    strcpy(auxP,valPath.toStdString().c_str());
+                                    moverCarpetaArchivo(fp,carpeta,auxP,destino);
+                                }else
+                                    cout << "ERROR: El usuario actual no tiene permisos de escritura en la carpeta destino" << endl;
                             }else
-                                cout << "ERROR: El usuario actual no tiene permisos de escritura en la carpeta destino" << endl;
+                                cout << "ERROR: El usuario actual no tiene permisos en alguna de las carpetas hijas" << endl;
                         }else
-                            cout << "ERROR: El usuario actual no tiene permisos en alguna de las carpetas hijas" << endl;
+                            cout << "ERROR: No existe la ruta a donde se copiara la carpeta/archivo" << endl;
                     }else
-                        cout << "ERROR: No existe la ruta a donde se copiara la carpeta/archivo" << endl;
+                        cout << "ERROR: La carpeta/archivo a mover no existe" << endl;
+                    fclose(fp);
                 }else
-                    cout << "ERROR: La carpeta/archivo a mover no existe" << endl;
-
-                fclose(fp);
+                    cout << "ERROR: Para poder ejecutar este comando necesita iniciar sesion" << endl;
             }else
                 cout << "ERROR: parametro -dest no definido "<< endl;
         }else
@@ -2361,6 +2398,8 @@ int log_in(QString direccion, QString nombre, QString user, QString password){
         fclose(fp);
         currentSession.inicioSuper = masterboot.mbr_partition[index].part_start;
         currentSession.fit = masterboot.mbr_partition[index].part_fit;
+        currentSession.inicioJournal = masterboot.mbr_partition[index].part_start + static_cast<int>(sizeof(SuperBloque));
+        currentSession.tipo_sistema = super.s_filesystem_type;
         return verificarDatos(user,password, direccion);
     }else{
         index = disco.buscarParticion_L(direccion, nombre);
@@ -4648,4 +4687,57 @@ bool permisosLecturaRecursivo(FILE* stream, int n){
             return true;
     }else
         return false;
+}
+
+/* Metodo para guardar el registro de cada operacion que se realiza en el sistema */
+void guardarJournal(char* operacion,int tipo,int permisos,char *nombre,char *content){
+    SuperBloque super;
+    Journal registro;
+    strcpy(registro.journal_operation_type,operacion);
+    registro.journal_type = tipo;
+    strcpy(registro.journal_name,nombre);
+    strcpy(registro.journal_content,content);
+    registro.journal_date = time(nullptr);
+    registro.journal_owner = currentSession.id_user;
+    registro.journal_permissions = permisos;
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+    //Buscar el ultimo journal
+    Journal registroAux;
+    bool ultimo = false;
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    int inicio_journal = currentSession.inicioSuper + static_cast<int>(sizeof(SuperBloque));
+    int final_journal = super.s_bm_inode_start;
+    fseek(fp,inicio_journal,SEEK_SET);
+    while((ftell(fp) < final_journal) && !ultimo){
+        fread(&registroAux,sizeof(Journal),1,fp);
+        if(registroAux.journal_type != 0 && registroAux.journal_type != 1)
+            ultimo = true;
+    }
+    fseek(fp,ftell(fp)- static_cast<int>(sizeof(Journal)),SEEK_SET);
+    fwrite(&registro,sizeof(Journal),1,fp);
+    fclose(fp);
+}
+
+/* Metodo para simular la perdida de datos del sistema */
+void systemLoss(){
+    if(flag_login){
+        SuperBloque super;
+        FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+        fseek(fp,currentSession.inicioSuper,SEEK_SET);
+        fread(&super,sizeof(SuperBloque),1,fp);
+        if(super.s_filesystem_type == 3){
+            int inicio = super.s_bm_inode_start;
+            int fin = super.s_block_start + super.s_block_size*(super.s_blocks_count-super.s_free_blocks_count);
+            char buffer = '\0';
+            //Inicio bitmap inodos
+            fseek(fp,super.s_bm_inode_start,SEEK_SET);
+            for(int i = inicio; i < fin; i++ )
+                fputc(buffer,fp);
+            fclose(fp);
+            cout << "Fatal System Error!" << endl;
+        }else
+            cout << "ERROR: No se puede ejecutar en un sistema EXT2" << endl;
+    }else
+        cout << "ERROR: Se necesita iniciar sesion para poder ejecutar este comando" << endl;
 }
