@@ -1883,6 +1883,9 @@ void recorrerMV(Nodo *raiz){
     bool flagPath = false;
     bool flagDest = false;
     bool flag = false; //Si se repite un parametro se activa
+    /*Variables para obtener los valores de los parametros(nodos)*/
+    QString valPath = "";
+    QString valDest = "";
 
     for(int i = 0; i < raiz->hijos.count(); i ++){
         Nodo n = raiz->hijos.at(i);
@@ -1890,21 +1893,25 @@ void recorrerMV(Nodo *raiz){
         case PATH:
         {
             if(flagPath){
-                cout << "ERROR parametro -path ya definido "<< endl;
+                cout << "ERROR: parametro -path ya definido "<< endl;
                 flag = true;
                 break;
             }
             flagPath = true;
+            valPath = n.valor;
+            valPath = valPath.replace("\"","");
         }
             break;
         case DEST:
         {
             if(flagDest){
-                cout << "ERROR parametro -dest ya definido" << endl;
+                cout << "ERROR: parametro -dest ya definido" << endl;
                 flag = true;
                 break;
             }
             flagDest = true;
+            valDest = n.valor;
+            valDest = valDest.replace("\"","");
         }
             break;
         }
@@ -1913,11 +1920,42 @@ void recorrerMV(Nodo *raiz){
     if(!flag){
         if(flagPath){
             if(flagDest){
+                FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+                char auxPath[500];
+                char auxDest[500];
+                strcpy(auxPath,valPath.toStdString().c_str());
+                strcpy(auxDest,valDest.toStdString().c_str());
+                int carpeta = buscarCarpetaArchivo(fp,auxPath);//Carpeta/archivo a mover
+                int destino = buscarCarpetaArchivo(fp,auxDest);
+                if(carpeta != -1){
+                    if(destino != -1){
+                        bool permisos = permisosLecturaRecursivo(fp,carpeta);
+                        if(permisos){
+                            SuperBloque super;
+                            InodoTable inodo;
+                            fseek(fp,currentSession.inicioSuper,SEEK_SET);
+                            fread(&super,sizeof(SuperBloque),1,fp);
+                            fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*destino,SEEK_SET);
+                            fread(&inodo,sizeof(InodoTable),1,fp);
+                            bool permisos2 = permisosDeEscritura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+                            if(permisos2){
+                                char auxP[500];
+                                strcpy(auxP,valPath.toStdString().c_str());
+                                moverCarpetaArchivo(fp,carpeta,auxP,destino);
+                            }else
+                                cout << "ERROR: El usuario actual no tiene permisos de escritura en la carpeta destino" << endl;
+                        }else
+                            cout << "ERROR: El usuario actual no tiene permisos en alguna de las carpetas hijas" << endl;
+                    }else
+                        cout << "ERROR: No existe la ruta a donde se copiara la carpeta/archivo" << endl;
+                }else
+                    cout << "ERROR: La carpeta/archivo a mover no existe" << endl;
 
+                fclose(fp);
             }else
-                cout << "ERROR parametro -dest no definido "<< endl;
+                cout << "ERROR: parametro -dest no definido "<< endl;
         }else
-            cout << "ERROR parametro -path no definido" << endl;
+            cout << "ERROR: parametro -path no definido" << endl;
     }
 }
 
@@ -4241,6 +4279,109 @@ void eliminarCarpetaArchivo(FILE *stream, int n){
 
 }
 
+/* Metodo para mover una carpeta o archivo
+ * @param FILE *stream: Fichero donde se esta leyendo actualmete
+ * @param int carpeta: Inodo de la carpeta/archivo a mover
+ * @param int destino: Inodo de la carpeta a donde se va a mover
+*/
+void moverCarpetaArchivo(FILE *stream, int carpeta, char* path,int destino){
+    SuperBloque super;
+    InodoTable inodo;
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*carpeta,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+
+    if(inodo.i_type == '0'){
+        BloqueCarpeta carp;
+        fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[0],SEEK_SET);
+        fread(&carp,sizeof(BloqueCarpeta),1,stream);
+        carp.b_content[1].b_inodo = destino;
+        fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[0],SEEK_SET);
+        fwrite(&carp,sizeof(BloqueCarpeta),1,stream);
+    }
+
+    BloqueCarpeta carpet;
+    //Bloque y posicion de la carpeta/archivo a mover
+    int bloque = 0;
+    int posicion = 0;
+    bloqueCarpetaArchivo(stream,path,bloque,posicion);
+    //Nombre de la carpeta/archivo a mover y el inodo al que apunta
+    char tempNombre[15];
+    int aux = 0;
+    bool flag = false;
+
+    fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+    fread(&carpet,sizeof(BloqueCarpeta),1,stream);
+    strcpy(tempNombre,carpet.b_content[posicion].b_name);
+    aux = carpet.b_content[posicion].b_inodo;
+    //Borramos la referencia de esa carpeta/archivo
+    memset(carpet.b_content[posicion].b_name,0,sizeof(carpet.b_content[posicion].b_name));
+    carpet.b_content[posicion].b_inodo = -1;
+    fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+    fwrite(&carpet,sizeof(BloqueCarpeta),1,stream);
+
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*destino,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+
+    for(int i = 0; i < 12; i++){
+        if(inodo.i_block[i] != -1){
+            BloqueCarpeta carp;
+            char byte = '0';
+            fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+            byte = static_cast<char>(fgetc(stream));
+            if(byte == '1'){
+                fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                fread(&carp,sizeof(BloqueCarpeta),1,stream);
+                for(int j = 0; j < 4; j++){
+                    if(carp.b_content[j].b_inodo == -1){
+                        strcpy(carp.b_content[j].b_name,tempNombre);
+                        carp.b_content[j].b_inodo = aux;
+                        fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                        fwrite(&carp,sizeof(BloqueCarpeta),1,stream);
+                        flag = true;
+                        cout << "Carpeta/archivo movido con exito" << endl;
+                        break;
+                    }
+                }
+            }
+            if(flag)
+                break;
+        }else{//Se tiene que crear una carpeta
+            char buffer = '1';
+            //Guardamos registramos el bloque en el inodo
+            int bitBloque = buscarBit(stream,'B',currentSession.fit);
+            inodo.i_block[i] = bitBloque;
+            fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*destino,SEEK_SET);
+            fwrite(&inodo,sizeof(InodoTable),1,stream);
+            //Creamos la nueva carpeta
+            BloqueCarpeta nuevaCarpeta;
+            nuevaCarpeta.b_content[0].b_inodo = aux;
+            nuevaCarpeta.b_content[1].b_inodo = -1;
+            nuevaCarpeta.b_content[2].b_inodo = -1;
+            nuevaCarpeta.b_content[3].b_inodo = -1;
+            strcpy(nuevaCarpeta.b_content[0].b_name,tempNombre);
+            strcpy(nuevaCarpeta.b_content[1].b_name,"");
+            strcpy(nuevaCarpeta.b_content[2].b_name,"");
+            strcpy(nuevaCarpeta.b_content[3].b_name,"");
+            fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bitBloque,SEEK_SET);
+            fwrite(&nuevaCarpeta,sizeof(BloqueCarpeta),1,stream);
+            //Registramos el bloque en el bitmap
+            fseek(stream,super.s_bm_block_start + bitBloque,SEEK_SET);
+            fwrite(&buffer,sizeof(char),1,stream);
+            //Modificamos el superbloque
+            super.s_free_blocks_count = super.s_free_blocks_count - 1;
+            super.s_first_blo = super.s_first_blo + 1;
+            fseek(stream,currentSession.inicioSuper,SEEK_SET);
+            fwrite(&super,sizeof(SuperBloque),1,stream);
+            cout << "Carpeta/archivo movido con exito" << endl;
+            break;
+        }
+    }
+
+}
+
 /* Funcion para verificar la existencia de una carpeta o archivo
  * @param FILE *stream = Archivo en el cual se encuentra la particion
  * @param char* path = direccion de la carpeta o archivo
@@ -4397,9 +4538,9 @@ bool permisosDeEscritura(int permisos, bool flagUser, bool flagGroup){
 */
 bool permisosDeLectura(int permisos, bool flagUser, bool flagGroup){
     string aux = to_string(permisos);
-    int propietario = static_cast<int>(aux[0]);
-    int grupo = static_cast<int>(aux[1]);
-    int otros = static_cast<int>(aux[2]);
+    int propietario = aux[0] - '0';
+    int grupo = aux[1] - '0';
+    int otros = aux[2] - '0';
 
     if((propietario >= 3) && flagUser)
         return true;
@@ -4411,8 +4552,8 @@ bool permisosDeLectura(int permisos, bool flagUser, bool flagGroup){
     return false;
 }
 
-/* Funcion para verificar si el usuario actual tiene permisos para borrar una carpeta/archivo
- * Si es una carpeta padre tiene que tener permisos para poder borrar todas las hijas
+/* Funcion para verificar si el usuario actual tiene permisos para de escritura en una carpeta/archivo
+ * Si es una carpeta padre tiene que tener permisos en todas las hijas
  * @param FILE* stream = fichero que se esta leyendo
  * @param int n = numero de inodo de la carpeta/archivo
  * @return true = si tiene permisos | false = no tiene permisos
@@ -4420,7 +4561,6 @@ bool permisosDeLectura(int permisos, bool flagUser, bool flagGroup){
 bool permisosEscrituraRecursivo(FILE* stream, int n){
     SuperBloque super;
     InodoTable inodo;
-
 
     fseek(stream,currentSession.inicioSuper,SEEK_SET);
     fread(&super,sizeof(SuperBloque),1,stream);
@@ -4461,3 +4601,51 @@ bool permisosEscrituraRecursivo(FILE* stream, int n){
         return false;
 }
 
+/* Funcion para verificar si el usuario actual tiene permisos de lectura en una carpeta/archivo
+ * Si es una carpeta padre tiene que tener permisos de lectura en todas las hijas
+ * @param FILE* stream = fichero que se esta leyendo
+ * @param int n = numero de inodo de la carpeta/archivo
+ * @return true = si tiene permisos | false = no tiene permisos
+*/
+bool permisosLecturaRecursivo(FILE* stream, int n){
+    SuperBloque super;
+    InodoTable inodo;
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+
+    bool permisos = permisosDeLectura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
+    if(permisos){
+        bool response = true;
+        if(inodo.i_type == '0'){//carpeta
+            for (int i = 0; i < 12; i++) {//Solo apuntadores directos-falta revisar indirectos
+                if(inodo.i_block[i] != -1){
+                    char byte = '0';
+                    fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+                    byte = static_cast<char>(fgetc(stream));
+                    if(byte == '1'){//Carpeta
+                        BloqueCarpeta carpeta;
+                        fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                        fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                        for (int j = 0; j < 4; j++) {
+                            if(carpeta.b_content[j].b_inodo != -1){
+                                if(strcmp(carpeta.b_content[j].b_name,".")!=0 && strcmp(carpeta.b_content[j].b_name,"..")!=0)
+                                    response = permisosLecturaRecursivo(stream,carpeta.b_content[j].b_inodo);
+                            }
+                        }
+                    }else{//Archivo
+                        InodoTable inodoAux;
+                        fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*inodo.i_block[i],SEEK_SET);
+                        fread(&inodoAux,sizeof(InodoTable),1,stream);
+                        response = permisosDeLectura(inodoAux.i_perm,(inodoAux.i_uid == currentSession.id_user),(inodoAux.i_gid == currentSession.id_grp));
+                    }
+                }
+            }
+            return response;
+        }else //archivo
+            return true;
+    }else
+        return false;
+}

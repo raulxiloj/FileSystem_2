@@ -72,6 +72,8 @@ int byteInodoBloque(FILE*,int,char);
 bool permisosDeEscritura(int,bool,bool);
 bool permisosDeLectura(int,bool,bool);
 bool permisosEscrituraRecursivo(FILE*,int);
+bool permisosLecturaRecursivo(FILE*,int);
 void eliminarCarpetaArchivo(FILE*,int);
+void moverCarpetaArchivo(FILE*,int,char*,int);
 
 #endif // MAINHEADER_H
