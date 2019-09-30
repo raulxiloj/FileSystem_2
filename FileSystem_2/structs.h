@@ -66,7 +66,7 @@ typedef struct{
     int i_gid; //GID del grupo al que pertenece el archivo/carpeta
     int i_size; //Tamano del archivo en bytes
     int i_block[15]; //Array de bloques
-    int i_type; //Indica si es archivo o carpeta
+    char i_type; //Indica si es archivo o carpeta
     int i_perm; //Guarada los permisos del archivo/carpeta
     time_t i_atime; //Ultima fecha en que se leyo el inodo sin modificarlo
     time_t i_ctime; //Fecha en que se creo el el inodo
