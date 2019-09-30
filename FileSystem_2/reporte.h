@@ -21,6 +21,7 @@ public:
     void graficarFILE(QString,QString,QString);
     void graficarPermisos(QString,QString,QString,QString,int);
     void graficarTree(QString,QString,QString,int);
+    void graficarJournaling(QString,QString,QString,int);
 };
 
 #endif // REPORTE_H

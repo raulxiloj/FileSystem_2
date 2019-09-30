@@ -623,3 +623,47 @@ void Reporte::graficarTree(QString direccion, QString destino, QString extension
     system(comando.c_str());
     cout << "Reporte Tree generado con exito " << endl;
 }
+
+/* Metodo para generar el reporte del Journaling de un sistema
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png
+ * @param int fin: byte donde finaliza el journaling
+*/
+void Reporte::graficarJournaling(QString direccion, QString destino, QString extension,int inicio_super){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"r");
+
+    SuperBloque super;
+    Journal j;
+    fseek(fp,inicio_super,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+
+    FILE *graph = fopen("grafica.dot","w");
+    fprintf(graph,"digraph G{\n");
+    fprintf(graph, "    nodo [shape=none, label=<\n");
+    fprintf(graph, "   <table border=\'0\' cellborder='1\' cellspacing=\'0\' bgcolor=\"gray\">\n");
+    fprintf(graph, "    <tr> <td COLSPAN=\'7\'> <b>JOURNALING</b> </td></tr>\n");
+    fprintf(graph, "    <tr> <td bgcolor=\"white\"><b>Operacion</b></td> <td bgcolor=\"white\"><b>Tipo</b></td><td bgcolor=\"white\"><b>Nombre</b></td><td bgcolor=\"white\"><b>Contenido</b></td>\n");
+    fprintf(graph, "    <td bgcolor=\"white\"><b>Propietario</b></td><td bgcolor=\"white\"><b>Permisos</b></td><td bgcolor=\"white\"><b>Fecha</b></td></tr>\n");
+    //
+    fseek(fp,inicio_super + static_cast<int>(sizeof(SuperBloque)),SEEK_SET);
+    while(ftell(fp) < super.s_bm_inode_start){
+        fread(&j,sizeof(Journal),1,fp);
+        if(j.journal_type == 0 || j.journal_type == 1){
+            struct tm *tm;
+            char fecha[100];
+            tm = localtime(&j.journal_date);
+            strftime(fecha,100,"%d/%m/%y %H:%S",tm);
+            fprintf(graph,"<tr><td>%s</td><td>%d</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td></tr>\n",j.journal_operation_type,j.journal_type,j.journal_name,j.journal_content,j.journal_owner,j.journal_permissions,fecha);
+        }
+    }
+    fprintf(graph, "   </table>>]\n");
+    fprintf(graph,"}");
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte Journaling generado con exito " << endl;
+}
