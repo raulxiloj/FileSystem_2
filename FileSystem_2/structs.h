@@ -90,13 +90,15 @@ typedef struct{
     int b_pointer[16];//Array con los apuntadores hacia bloques
 }BloqueApuntadores;
 
+/* Struct para guardar un registro de las operaciones que se hacen el sistema
+ * de archivos ejemplo: creacion de carpetas o archivos */
 typedef struct{
-    int journal_operation_type;
+    char journal_operation_type[10];
     int journal_type;//Archivo/Carpeta
     char journal_name[50];
     char journal_content[100];
     time_t journal_date;
-    char journal_owner[20];
+    int journal_owner;
     int journal_permissions;
 }Journal;
 
@@ -105,6 +107,8 @@ typedef struct{
     int id_user;
     int id_grp;
     int inicioSuper;
+    int inicioJournal;
+    int tipo_sistema;
     QString direccion;
     char username[12];
     char password[12];
