@@ -4,6 +4,8 @@
 #include <math.h>
 #include <libgen.h>
 #include <QFileInfo>
+#include <thread>         // std::this_thread::sleep_for
+#include <chrono>         // std::chrono::seconds
 
 #include "scanner.h"
 #include "parser.h"
@@ -283,12 +285,12 @@ void reconocerComando(Nodo *raiz)
         break;
     case RECOVERY:
     {
-
+        systemRecovery(raiz->hijos.at(0).valor);
     }
         break;
     case LOSS:
     {
-        systemLoss();
+        systemLoss(raiz->hijos.at(0).valor);
     }
         break;
     default: printf("ERROR no se reconoce el comando");
@@ -1345,6 +1347,14 @@ void recorrerMKGRP(Nodo *raiz){
                     QString nuevoGrupo = QString::number(idGrp)+",G,"+grpName+"\n";
                     agregarUsersTXT(nuevoGrupo);
                     cout << "Grupo creado con exito "<< endl;
+                    //Guardamos el registro en el journal
+                    char aux[64];
+                    char operacion[10];
+                    char content[2];
+                    strcpy(aux,nuevoGrupo.toStdString().c_str());
+                    strcpy(operacion,"mkgrp");
+                    memset(content,0,2);
+                    guardarJournal(operacion,0  ,0,aux,content);
                 }else
                     cout << "ERROR ya existe un grupo con ese nombre" << endl;
             }else
@@ -1439,6 +1449,14 @@ void recorrerMKUSR(Nodo *raiz){
                                                 QString datos = QString::number(id) + ",U,"+group+","+user+","+pass+"\n";
                                                 agregarUsersTXT(datos);
                                                 cout << "Usuario creado con exito " << endl;
+                                                //Guardamos el registro en el journal
+                                                char aux[64];
+                                                char operacion[10];
+                                                char content[2];
+                                                strcpy(aux,datos.toStdString().c_str());
+                                                strcpy(operacion,"mkusr");
+                                                memset(content,0,2);
+                                                guardarJournal(operacion,0,0,aux,content);
                                             }else
                                                 cout << "ERROR el usuario ya existe" <<endl;
                                         }else
@@ -1621,7 +1639,6 @@ void recorrerMKFILE(Nodo *raiz){
                                 strcpy(content,to_string(valSize).c_str());
                                 guardarJournal(operacion,0,664,aux,content);
                             }
-
                         }
                         cout << "Archivo creado con exito" << endl;
                     }else if(result == 2)
@@ -2539,7 +2556,8 @@ int buscarGrupo(QString name){
             strcpy(tipo,token2);
             if(strcmp(tipo,"G") == 0){
                 strcpy(group,end_token);
-                if(strcmp(group,name.toStdString().c_str()) == 0) return atoi(id);
+                if(strcmp(group,name.toStdString().c_str()) == 0)
+                    return atoi(id);
             }
         }
         token = strtok_r(nullptr,"\n",&end_str);
@@ -4720,24 +4738,184 @@ void guardarJournal(char* operacion,int tipo,int permisos,char *nombre,char *con
 }
 
 /* Metodo para simular la perdida de datos del sistema */
-void systemLoss(){
-    if(flag_login){
-        SuperBloque super;
-        FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
-        fseek(fp,currentSession.inicioSuper,SEEK_SET);
-        fread(&super,sizeof(SuperBloque),1,fp);
-        if(super.s_filesystem_type == 3){
-            int inicio = super.s_bm_inode_start;
-            int fin = super.s_block_start + super.s_block_size*(super.s_blocks_count-super.s_free_blocks_count);
-            char buffer = '\0';
-            //Inicio bitmap inodos
-            fseek(fp,super.s_bm_inode_start,SEEK_SET);
-            for(int i = inicio; i < fin; i++ )
-                fputc(buffer,fp);
-            fclose(fp);
-            cout << "Fatal System Error!" << endl;
+void systemLoss(QString id){
+    NodoMount *n = lista->getNodo(id);
+    if(n != nullptr){
+        if(flag_login){
+            SuperBloque super;
+            FILE *fp = fopen(n->direccion.toStdString().c_str(),"rb+");
+            int index = disco.buscarParticion_P_E(n->direccion,n->nombre);
+            if(index != -1){//Primaria|Extendida
+                MBR masterboot;
+                fread(&masterboot,sizeof(MBR),1,fp);
+                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                fread(&super,sizeof(SuperBloque),1,fp);
+            }else{//Logica
+                index = disco.buscarParticion_L(n->direccion,n->nombre);
+                if(index != -1){
+                    EBR extendedBoot;
+                    fseek(fp,index,SEEK_SET);
+                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                    fread(&super,sizeof(SuperBloque),1,fp);
+                }
+            }
+            if(super.s_filesystem_type == 3){
+                char buffer = '0';
+                int inicio = super.s_bm_inode_start;
+                int fin = super.s_block_start + super.s_block_size*(super.s_blocks_count);
+                fseek(fp,inicio,SEEK_SET);
+                for(int i = inicio; i < fin; i++)
+                    fputc(buffer,fp);
+                fclose(fp);
+                cout << "STOP: {Fatal System Error}" << endl;
+                cout << "Press enter to try to continue" << endl;
+                getchar();
+            }else
+                cout << "ERROR: No se puede ejecutar en un sistema EXT2" << endl;
         }else
-            cout << "ERROR: No se puede ejecutar en un sistema EXT2" << endl;
+            cout << "ERROR: Se necesita iniciar sesion para poder ejecutar este comando" << endl;
     }else
-        cout << "ERROR: Se necesita iniciar sesion para poder ejecutar este comando" << endl;
+        cout << "ERROR: No se encuentra la particion" << endl;
+}
+
+/* Metodo para simular la recuperacion de datos del sistema */
+void systemRecovery(QString id){
+    NodoMount *n = lista->getNodo(id);
+    if(n != nullptr){
+        if(flag_login){
+            //Datos del usuario actual
+            int id_usr = currentSession.id_user;
+            int id_grp = currentSession.id_grp;
+            SuperBloque super;
+            int index = disco.buscarParticion_P_E(n->direccion,n->nombre);
+            int inicioJournal = 0;
+            FILE *fp = fopen(n->direccion.toStdString().c_str(),"rb+");
+            if(index != -1){//Primaria|Extendida
+                MBR masterboot;
+                fread(&masterboot,sizeof(MBR),1,fp);
+                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                inicioJournal = masterboot.mbr_partition[index].part_start + static_cast<int>(sizeof(SuperBloque));
+                fread(&super,sizeof(SuperBloque),1,fp);
+                formatearEXT3(masterboot.mbr_partition[index].part_start, masterboot.mbr_partition[index].part_start + masterboot.mbr_partition[index].part_size,n->direccion);
+            }else{//Logica
+                index = disco.buscarParticion_L(n->direccion,n->nombre);
+                if(index != -1){
+                    EBR extendedBoot;
+                    fseek(fp,index,SEEK_SET);
+                    fread(&extendedBoot,sizeof(EBR),1,fp);
+                    fread(&super,sizeof(SuperBloque),1,fp);
+                    fseek(fp,index,SEEK_SET);
+                    int init = static_cast<int>(ftell(fp));
+                    formatearEXT3(init,init+extendedBoot.part_size,n->direccion);
+                }
+            }
+            Journal registro;
+            if(super.s_filesystem_type == 3){
+                fseek(fp,inicioJournal,SEEK_SET);
+                while(ftell(fp) < super.s_bm_inode_start){
+                    fread(&registro,sizeof(Journal),1,fp);
+                    if(strcmp(registro.journal_operation_type,"mkgrp") == 0 || strcmp(registro.journal_operation_type,"mkusr") == 0){
+                        currentSession.id_user = 1;
+                        currentSession.id_grp = 1;
+                        QString datos(registro.journal_name);
+                        agregarUsersTXT(datos);
+                    }else if(strcmp(registro.journal_operation_type,"mkdir") == 0){
+                        datosUsuario(registro.journal_owner,currentSession.id_user,currentSession.id_grp);
+                        QString path(registro.journal_name);
+                        crearCarpeta(path,true);
+                    }else if(strcmp(registro.journal_operation_type,"mkfile") == 0){
+                        datosUsuario(registro.journal_owner,currentSession.id_user,currentSession.id_grp);
+                        QString path(registro.journal_name);
+                        bool aux = isNumber(registro.journal_content);
+                        if(aux){
+                            int size = atoi(registro.journal_content);
+                            crearArchivo(path,true,size,"");
+                        }else
+                            crearArchivo(path,true,0,registro.journal_content);
+                    }
+                }
+                for(int i = 1; i <= 20; i++){
+                    cout << "\r[-----" << i*5 << "%-----] Restaurando el sistema" << flush;
+                    this_thread::sleep_for(chrono::milliseconds(200));
+                }
+                cout << endl;
+                cout << "El sistema se ha restaurado con exito" << endl;
+                currentSession.id_user = id_usr;
+                currentSession.id_grp = id_grp;
+            }else
+                cout << "ERROR: No se puede ejecutar en un sistema EXT2" << endl;
+        }else
+            cout << "ERROR: Se necesita iniciar sesion para poder ejecutar este comando" << endl;
+    }else
+        cout << "ERROR: No se encuentra la particion" << endl;
+}
+
+void datosUsuario(int usuario,int &idUsr,int &idGrp){
+    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+
+    char cadena[400] = "\0";
+    SuperBloque super;
+    InodoTable inodo;
+
+    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    //Nos posicionamos en el inodo del archivo users.txt
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)), SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    for(int i = 0; i < 15; i++){
+        if(inodo.i_block[i] != -1){
+            BloqueArchivo archivo;
+            fseek(fp,super.s_block_start,SEEK_SET);
+            for(int j = 0; j <= inodo.i_block[i]; j++){
+                fread(&archivo,sizeof(BloqueArchivo),1,fp);
+            }
+            strcat(cadena,archivo.b_content);
+        }
+    }
+
+    fclose(fp);
+
+    char *end_str;
+    char *token = strtok_r(cadena,"\n",&end_str);
+    while(token != nullptr){
+        char id[2];
+        char tipo[2];
+        char user[12];
+        char grupo[12];
+        char *end_token;
+        char *token2 = strtok_r(token,",",&end_token);
+        strcpy(id,token2);
+        if(strcmp(id,"0") != 0){//Verificar que no sea un U/G eliminado
+            token2 = strtok_r(nullptr,",",&end_token);
+            strcpy(tipo,token2);
+            if(strcmp(tipo,"U") == 0){
+                token2 = strtok_r(nullptr,",",&end_token);
+                strcpy(grupo,token2);
+                token2 = strtok_r(nullptr,",",&end_token);
+                strcpy(user,token2);
+                if(strcmp(id,to_string(usuario).c_str()) == 0){
+                    QString groupName(grupo);
+                    idUsr = id[0];
+                    idGrp = buscarGrupo(groupName);
+                    break;
+                }
+
+            }
+        }
+        token = strtok_r(nullptr,"\n",&end_str);
+    }
+}
+
+bool isNumber(string numero){
+    bool response = false;
+    for (int i = 0; i < static_cast<int>(numero.length()); i++) {
+        if(isdigit(numero[i]))
+            response = true;
+        else{
+            response = false;
+            break;
+        }
+    }
+    return response;
 }

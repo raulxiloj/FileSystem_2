@@ -76,7 +76,9 @@ bool permisosLecturaRecursivo(FILE*,int);
 void eliminarCarpetaArchivo(FILE*,int);
 void moverCarpetaArchivo(FILE*,int,char*,int);
 void guardarJournal(char*,int,int,char*,char*);
-void systemLoss();
-void systemRecovery();
+void systemLoss(QString);
+void systemRecovery(QString);
+void datosUsuario(int,int&,int&);
+bool isNumber(string);
 
 #endif // MAINHEADER_H
