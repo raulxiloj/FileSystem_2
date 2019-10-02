@@ -19,7 +19,7 @@ public:
     void reporteBM(QString, QString, int, int);
     void graficarSuper(QString,QString,QString,int);
     void graficarFILE(QString,QString,QString);
-    void graficarPermisos(QString,QString,QString,QString,int);
+    void graficarPermisos(QString,QString,QString,int,int,Usuario,QString);
     void graficarTree(QString,QString,QString,int);
     void graficarJournaling(QString,QString,QString,int);
 };
