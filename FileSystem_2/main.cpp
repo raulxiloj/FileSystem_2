@@ -83,6 +83,7 @@ enum Choice
     BM_BLOCK = 54,
     TREE = 55,
     SB = 56,
+    RUTA = 57,
 };
 
 /*  FUNCION PRINCIPAL */
@@ -843,10 +844,12 @@ void recorrerREP(Nodo *raiz)
     bool flagName = false;
     bool flagPath = false;
     bool flagID = false;
+    bool flagRuta = false;
     bool flag = false;
     QString valName = "";
     QString valPath = "";
     QString valID = "";
+    QString valRuta = "";
 
     for(int i = 0; i < raiz->hijos.count(); i++)
     {
@@ -885,6 +888,18 @@ void recorrerREP(Nodo *raiz)
             }
             flagID = true;
             valID = n.valor;
+        }
+            break;
+        case RUTA:
+        {
+            if(flagRuta){
+                cout << "ERROR parametro -ruta ya definido" << endl;
+                flag = true;
+                break;
+            }
+            flagRuta = true;
+            valRuta = n.valor;
+            valRuta = valRuta.replace("\"","");
         }
             break;
         }
@@ -1064,7 +1079,35 @@ void recorrerREP(Nodo *raiz)
                         }else if(valName == "file"){
 
                         }else if(valName == "ls"){
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){
+                                MBR masterboot;
+                                SuperBloque super;
+                                InodoTable inodo;
+                                char auxRuta[500];
+                                strcpy(auxRuta,valRuta.toStdString().c_str());
+                                FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                                fread(&masterboot,sizeof(MBR),1,fp);
+                                fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
+                                fread(&super,sizeof(SuperBloque),1,fp);
+                                int existe = buscarCarpetaArchivo(fp,auxRuta);
+                                if(existe != -1){
+                                    char nombre[50];
+                                    char auxRuta[400];
+                                    strcpy(auxRuta,valRuta.toStdString().c_str());
+                                    strcpy(nombre,basename(auxRuta));
+                                    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*existe,SEEK_SET);
+                                    fread(&inodo,sizeof(InodoTable),1,fp);
+                                    Usuario user = getUsuario(aux->direccion,masterboot.mbr_partition[index].part_start,inodo.i_uid);
+                                    r.graficarPermisos(aux->direccion,valPath,ext,masterboot.mbr_partition[index].part_start,existe,user,QString(nombre));
+                                }
+                                else
+                                    cout << "ERROR: No se encuentra la ruta " << endl;
+                                fclose(fp);
 
+                            }else{
+
+                            }
                         }
                     }else
                         cout << "ERROR no se encuentra la particion" << endl;
@@ -1347,14 +1390,16 @@ void recorrerMKGRP(Nodo *raiz){
                     QString nuevoGrupo = QString::number(idGrp)+",G,"+grpName+"\n";
                     agregarUsersTXT(nuevoGrupo);
                     cout << "Grupo creado con exito "<< endl;
-                    //Guardamos el registro en el journal
-                    char aux[64];
-                    char operacion[10];
-                    char content[2];
-                    strcpy(aux,nuevoGrupo.toStdString().c_str());
-                    strcpy(operacion,"mkgrp");
-                    memset(content,0,2);
-                    guardarJournal(operacion,0  ,0,aux,content);
+                    //Guardamos el registro en el journal si es un EXT3
+                    if(currentSession.tipo_sistema ==3){
+                        char aux[64];
+                        char operacion[10];
+                        char content[2];
+                        strcpy(aux,nuevoGrupo.toStdString().c_str());
+                        strcpy(operacion,"mkgrp");
+                        memset(content,0,2);
+                        guardarJournal(operacion,0  ,0,aux,content);
+                    }
                 }else
                     cout << "ERROR ya existe un grupo con ese nombre" << endl;
             }else
@@ -1449,14 +1494,16 @@ void recorrerMKUSR(Nodo *raiz){
                                                 QString datos = QString::number(id) + ",U,"+group+","+user+","+pass+"\n";
                                                 agregarUsersTXT(datos);
                                                 cout << "Usuario creado con exito " << endl;
-                                                //Guardamos el registro en el journal
-                                                char aux[64];
-                                                char operacion[10];
-                                                char content[2];
-                                                strcpy(aux,datos.toStdString().c_str());
-                                                strcpy(operacion,"mkusr");
-                                                memset(content,0,2);
-                                                guardarJournal(operacion,0,0,aux,content);
+                                                //Guardamos el registro en el journal si es un sistema EXT3
+                                                if(currentSession.tipo_sistema ==3){
+                                                    char aux[64];
+                                                    char operacion[10];
+                                                    char content[2];
+                                                    strcpy(aux,datos.toStdString().c_str());
+                                                    strcpy(operacion,"mkusr");
+                                                    memset(content,0,2);
+                                                    guardarJournal(operacion,0,0,aux,content);
+                                                }
                                             }else
                                                 cout << "ERROR el usuario ya existe" <<endl;
                                         }else
@@ -2498,8 +2545,6 @@ int verificarDatos(QString user, QString password, QString direccion){
                         currentSession.direccion = direccion;
                         currentSession.id_user = atoi(id);
                         currentSession.id_grp = buscarGrupo(group);
-                        strcpy(currentSession.username,user_);
-                        strcpy(currentSession.password,password_);
                         return 1;
                     }else
                         return 2;
@@ -2572,8 +2617,6 @@ void log_out(){
         flag_login = false;
         currentSession.id_user = -1;
         //currentUser.id_grp -1;
-        memset(currentSession.username,0,sizeof(currentSession.username));
-        memset(currentSession.password,0,sizeof(currentSession.password));
         currentSession.direccion = "";
         currentSession.inicioSuper = -1;
         cout << "...\nSesion finalizada " << endl;
@@ -4786,15 +4829,18 @@ void systemRecovery(QString id){
             //Datos del usuario actual
             int id_usr = currentSession.id_user;
             int id_grp = currentSession.id_grp;
+            Usuario user;
             SuperBloque super;
             int index = disco.buscarParticion_P_E(n->direccion,n->nombre);
             int inicioJournal = 0;
+            int inicioSuper = 0;
             FILE *fp = fopen(n->direccion.toStdString().c_str(),"rb+");
             if(index != -1){//Primaria|Extendida
                 MBR masterboot;
                 fread(&masterboot,sizeof(MBR),1,fp);
                 fseek(fp,masterboot.mbr_partition[index].part_start,SEEK_SET);
                 inicioJournal = masterboot.mbr_partition[index].part_start + static_cast<int>(sizeof(SuperBloque));
+                inicioSuper = masterboot.mbr_partition[index].part_start;
                 fread(&super,sizeof(SuperBloque),1,fp);
                 formatearEXT3(masterboot.mbr_partition[index].part_start, masterboot.mbr_partition[index].part_start + masterboot.mbr_partition[index].part_size,n->direccion);
             }else{//Logica
@@ -4820,11 +4866,15 @@ void systemRecovery(QString id){
                         QString datos(registro.journal_name);
                         agregarUsersTXT(datos);
                     }else if(strcmp(registro.journal_operation_type,"mkdir") == 0){
-                        datosUsuario(registro.journal_owner,currentSession.id_user,currentSession.id_grp);
+                        user = getUsuario(n->direccion,inicioSuper,registro.journal_owner);
+                        currentSession.id_user = user.id_usr;
+                        currentSession.id_grp = user.id_grp;
                         QString path(registro.journal_name);
                         crearCarpeta(path,true);
                     }else if(strcmp(registro.journal_operation_type,"mkfile") == 0){
-                        datosUsuario(registro.journal_owner,currentSession.id_user,currentSession.id_grp);
+                        user = getUsuario(n->direccion,inicioSuper,registro.journal_owner);
+                        currentSession.id_user = user.id_usr;
+                        currentSession.id_grp = user.id_grp;
                         QString path(registro.journal_name);
                         bool aux = isNumber(registro.journal_content);
                         if(aux){
@@ -4850,14 +4900,15 @@ void systemRecovery(QString id){
         cout << "ERROR: No se encuentra la particion" << endl;
 }
 
-void datosUsuario(int usuario,int &idUsr,int &idGrp){
-    FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+Usuario getUsuario(QString direccion,int inicioSuper, int usuario){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"rb+");
 
     char cadena[400] = "\0";
     SuperBloque super;
     InodoTable inodo;
+    Usuario response;
 
-    fseek(fp,currentSession.inicioSuper,SEEK_SET);
+    fseek(fp,inicioSuper,SEEK_SET);
     fread(&super,sizeof(SuperBloque),1,fp);
     //Nos posicionamos en el inodo del archivo users.txt
     fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable)), SEEK_SET);
@@ -4894,10 +4945,12 @@ void datosUsuario(int usuario,int &idUsr,int &idGrp){
                 strcpy(grupo,token2);
                 token2 = strtok_r(nullptr,",",&end_token);
                 strcpy(user,token2);
-                if(strcmp(id,to_string(usuario).c_str()) == 0){
+                if(atoi(id) == usuario){
                     QString groupName(grupo);
-                    idUsr = id[0];
-                    idGrp = buscarGrupo(groupName);
+                    response.id_grp = atoi(id);
+                    response.id_grp = buscarGrupo(groupName);
+                    strcpy(response.username,user);
+                    strcpy(response.group,grupo);
                     break;
                 }
 
@@ -4905,6 +4958,7 @@ void datosUsuario(int usuario,int &idUsr,int &idGrp){
         }
         token = strtok_r(nullptr,"\n",&end_str);
     }
+    return response;
 }
 
 bool isNumber(string numero){
@@ -4919,3 +4973,4 @@ bool isNumber(string numero){
     }
     return response;
 }
+

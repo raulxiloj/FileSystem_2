@@ -78,7 +78,7 @@ void moverCarpetaArchivo(FILE*,int,char*,int);
 void guardarJournal(char*,int,int,char*,char*);
 void systemLoss(QString);
 void systemRecovery(QString);
-void datosUsuario(int,int&,int&);
+Usuario getUsuario(QString,int,int);
 bool isNumber(string);
 
 #endif // MAINHEADER_H
