@@ -66,7 +66,7 @@ int Nodo::getTipo()
     if(this->tipo == "bm_block")   return 54;
     if(this->tipo == "tree")       return 55;
     if(this->tipo == "sb")         return 56;
-
+    if(this->tipo == "ruta")       return 57;
     return 0;
 }
 
