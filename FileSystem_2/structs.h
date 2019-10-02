@@ -110,10 +110,15 @@ typedef struct{
     int inicioJournal;
     int tipo_sistema;
     QString direccion;
+    char fit;
+}Sesion;
+
+typedef struct{
+    int id_usr;
+    int id_grp;
     char username[12];
     char password[12];
     char group[12];
-    char fit;
-}Sesion;
+}Usuario;
 
 #endif // STRUCTS_H
