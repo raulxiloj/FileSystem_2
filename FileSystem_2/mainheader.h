@@ -75,6 +75,7 @@ bool permisosEscrituraRecursivo(FILE*,int);
 bool permisosLecturaRecursivo(FILE*,int);
 void eliminarCarpetaArchivo(FILE*,int);
 void moverCarpetaArchivo(FILE*,int,char*,int);
+void cambiarPermisosRecursivo(FILE*,int,int);
 void guardarJournal(char*,int,int,char*,char*);
 void systemLoss(QString);
 void systemRecovery(QString);

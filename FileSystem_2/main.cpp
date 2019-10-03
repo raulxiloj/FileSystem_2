@@ -1077,7 +1077,23 @@ void recorrerREP(Nodo *raiz)
                                 }
                             }
                         }else if(valName == "file"){
-
+                            int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
+                            if(index != -1){
+                               MBR masterboot;
+                               char auxRuta[500];
+                               strcpy(auxRuta,valRuta.toStdString().c_str());
+                               FILE *fp = fopen(aux->direccion.toStdString().c_str(),"rb+");
+                               fread(&masterboot,sizeof(MBR),1,fp);
+                               int existe = buscarCarpetaArchivo(fp,auxRuta);
+                               if(existe != -1){
+                                   char nombre[50];
+                                   char auxRuta[400];
+                                   strcpy(auxRuta,valRuta.toStdString().c_str());
+                                   strcpy(nombre,basename(auxRuta));
+                                   r.graficarFILE(aux->direccion,valPath,ext,QString(nombre),masterboot.mbr_partition[index].part_start,existe);
+                               }
+                               fclose(fp);
+                            }
                         }else if(valName == "ls"){
                             int index = disco.buscarParticion_P_E(aux->direccion,aux->nombre);
                             if(index != -1){
@@ -1549,7 +1565,9 @@ void recorrerCHMOD(Nodo *raiz){
     bool flagUgo = false;
     bool flagR = false;
     bool flag = false; //Si se repite un valor se activa esta bandera
-
+    //Variables para obtener los valores de los parametros(nodos)
+    QString valPath = "";
+    QString valUgo = "";
     for(int i = 0; i < raiz->hijos.count(); i++){
         Nodo n = raiz->hijos.at(i);
         switch (n.tipo_) {
@@ -1561,6 +1579,8 @@ void recorrerCHMOD(Nodo *raiz){
                 break;
             }
             flagPath = true;
+            valPath = n.valor;
+            valPath = valPath.replace("\"","");
         }
             break;
         case UGO:
@@ -1571,6 +1591,7 @@ void recorrerCHMOD(Nodo *raiz){
                 break;
             }
             flagUgo = true;
+            valUgo = n.valor;
         }
             break;
         case R:
@@ -1589,11 +1610,44 @@ void recorrerCHMOD(Nodo *raiz){
     if(!flag){
         if(flagPath){
             if(flagUgo){
-
+                if(flag_login){
+                    int propietario =valUgo.at(0).unicode() - '0';//Obtener el valor numero de un char
+                    int grupo = valUgo.at(1).unicode() - '0';
+                    int otros = valUgo.at(2).unicode() - '0';
+                    if((propietario >= 0 && propietario <= 7) && (grupo >= 0 && grupo <= 7) && (otros >= 0 && otros <= 7)){
+                        char auxPath[500];
+                        strcpy(auxPath,valPath.toStdString().c_str());
+                        FILE *fp = fopen(currentSession.direccion.toStdString().c_str(),"rb+");
+                        SuperBloque super;
+                        InodoTable inodo;
+                        int existe = buscarCarpetaArchivo(fp,auxPath);
+                        fseek(fp,currentSession.inicioSuper,SEEK_SET);
+                        fread(&super,sizeof(SuperBloque),1,fp);
+                        fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*existe,SEEK_SET);
+                        fread(&inodo,sizeof(InodoTable),1,fp);
+                        if(existe != -1){
+                            if((currentSession.id_user ==1 && currentSession.id_grp == 1) || currentSession.id_user == inodo.i_uid){
+                                if(flagR)
+                                    cambiarPermisosRecursivo(fp,existe,valUgo.toInt());
+                                else{
+                                    inodo.i_perm = valUgo.toInt();
+                                    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*existe,SEEK_SET);
+                                    fwrite(&inodo,sizeof(InodoTable),1,fp);
+                                }
+                                cout << "Permisos cambiados exitosamente" << endl;
+                            }else
+                                cout << "ERROR: Para cambiar los permisos debe ser el usuario root o ser dueno de la carpeta/archivo" << endl;
+                        }else
+                            cout << "ERROR: La ruta no existe" << endl;
+                        fclose(fp);
+                    }else
+                        cout << "ERROR: alguno de los digitos se sale del rango predeterminado"<< endl;
+                }else
+                    cout << "ERROR: Se necesita iniciar sesion para poder ejecutar este comando" << endl;
             }else
-                cout << "ERROR parametro -ugo no definido" << endl;
+                cout << "ERROR: Parametro -ugo no definido" << endl;
         }else
-            cout << "ERROR parametro -path no definido" << endl;
+            cout << "ERROR: Parametro -path no definido" << endl;
     }
 }
 
@@ -1706,6 +1760,7 @@ void recorrerMKFILE(Nodo *raiz){
 
 void recorrerCAT(Nodo *raiz){
    QString path = raiz->hijos.at(0).valor;
+   path = path.replace("\"","");
    char auxPath[500];
    strcpy(auxPath,path.toStdString().c_str());
    if(flag_login){
@@ -3668,6 +3723,8 @@ int nuevaCarpeta(FILE *stream, char fit, bool flagP, char *path, int index){
                     int carpeta = buscarCarpetaArchivo(stream,dir);
                     if(carpeta == -1){
                         response = nuevaCarpeta(stream,fit,false,auxDir,index);
+                        if(response == 2)
+                            break;
                         strcpy(auxDir,aux.c_str());
                         index = buscarCarpetaArchivo(stream,auxDir);
                     }else
@@ -4750,6 +4807,38 @@ bool permisosLecturaRecursivo(FILE* stream, int n){
         return false;
 }
 
+void cambiarPermisosRecursivo(FILE* stream, int n, int permisos){
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueCarpeta carpeta;
+    char byte ='0';
+
+    fseek(stream,currentSession.inicioSuper,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,stream);
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,stream);
+    inodo.i_perm = permisos;
+    fseek(stream,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fwrite(&inodo,sizeof(InodoTable),1,stream);
+
+    for(int i = 0; i < 15; i++){
+        if(inodo.i_block[i] != -1){
+            fseek(stream,super.s_bm_block_start + inodo.i_block[i],SEEK_SET);
+            byte = static_cast<char>(fgetc(stream));
+            if(byte == '1'){
+                fseek(stream,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                for(int j = 0; j < 4; j++){
+                    if(carpeta.b_content[j].b_inodo != -1){
+                        if(strcmp(carpeta.b_content[j].b_name,".")!=0 &&  strcmp(carpeta.b_content[j].b_name,"..")!=0)
+                            cambiarPermisosRecursivo(stream,carpeta.b_content[j].b_inodo,permisos);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /* Metodo para guardar el registro de cada operacion que se realiza en el sistema */
 void guardarJournal(char* operacion,int tipo,int permisos,char *nombre,char *content){
     SuperBloque super;
@@ -4945,13 +5034,14 @@ Usuario getUsuario(QString direccion,int inicioSuper, int usuario){
                 strcpy(grupo,token2);
                 token2 = strtok_r(nullptr,",",&end_token);
                 strcpy(user,token2);
-                if(atoi(id) == usuario){
+                int idAux = atoi(id);
+                if(idAux == usuario){
                     QString groupName(grupo);
-                    response.id_grp = atoi(id);
+                    response.id_usr = atoi(id);
                     response.id_grp = buscarGrupo(groupName);
                     strcpy(response.username,user);
                     strcpy(response.group,grupo);
-                    break;
+                    return response;
                 }
 
             }
