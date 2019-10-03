@@ -300,7 +300,7 @@ void Reporte::graficarBloques(QString direccion, QString destino, QString extens
 
     BloqueCarpeta carpeta;
     BloqueArchivo archivo;
-    //BloqueApuntadores apuntador;
+    BloqueApuntadores apuntador;
 
     int aux = bm_block_start;
     int i = 0;
@@ -330,6 +330,17 @@ void Reporte::graficarBloques(QString direccion, QString destino, QString extens
             fprintf(graph, "   <table border=\'0\' cellborder='1' cellspacing='0' bgcolor=\"sandybrown\">");
             fprintf(graph, "    <tr> <td colspan=\'2\'> <b>Bloque Archivo %d </b></td></tr>\n",i);
             fprintf(graph, "    <tr> <td colspan=\'2\' bgcolor=\"white\"> %s </td></tr>\n",archivo.b_content);
+            fprintf(graph, "   </table>>]\n\n");
+        }else if(buffer == '3'){
+            fseek(fp,block_start + static_cast<int>(sizeof(BloqueApuntadores))*i,SEEK_SET);
+            fread(&apuntador,sizeof(BloqueApuntadores),1,fp);
+            fseek(fp,block_start + static_cast<int>(sizeof(BloqueApuntadores))*i,SEEK_SET);
+            fread(&apuntador,sizeof(BloqueApuntadores),1,fp);
+            fprintf(graph, "    bloque_%d [shape=plaintext fontname=\"Century Gothic\" label=< \n",i);
+            fprintf(graph, "   <table border=\'0\' bgcolor=\"khaki\">\n");
+            fprintf(graph, "    <tr> <td> <b>Pointer block %d</b></td></tr>\n",i);
+            for(int j = 0; j < 16; j++)
+                fprintf(graph, "    <tr> <td bgcolor=\"white\">%d</td> </tr>\n",apuntador.b_pointer[j]);
             fprintf(graph, "   </table>>]\n\n");
         }
         i++;
@@ -708,7 +719,6 @@ void Reporte::graficarTree(QString direccion, QString destino, QString extension
     fclose(fp);
 
     string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
-    //string comando = "dot -Tpdf grafica.dot -o /home/raul/Desktop/lol.pdf";
     system(comando.c_str());
     cout << "Reporte Tree generado con exito " << endl;
 }
@@ -755,4 +765,66 @@ void Reporte::graficarJournaling(QString direccion, QString destino, QString ext
     string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
     system(comando.c_str());
     cout << "Reporte Journaling generado con exito " << endl;
+}
+
+/* Metodo para generar el reporte del Journaling de un sistema
+ * @param QString direccion: Es la direccion donde se encuentra la particion
+ * @param QString destino: Es la ruta donde se creara el reporte
+ * @param QString extension: La extension que tendra el reporte .jpg|.png
+ * @param QString name: El nombre del archivo
+ * @param int start_super: byte donde inicia el super bloque
+ * @param int n: numero de inodo del archivo
+*/
+void Reporte::graficarFILE(QString direccion, QString destino, QString extension, QString name,int start_super,int n){
+    FILE *fp = fopen(direccion.toStdString().c_str(),"r");
+
+    SuperBloque super;
+    InodoTable inodo;
+    BloqueArchivo archivo;
+
+    fseek(fp,start_super,SEEK_SET);
+    fread(&super,sizeof(SuperBloque),1,fp);
+    fseek(fp,super.s_inode_start + static_cast<int>(sizeof(InodoTable))*n,SEEK_SET);
+    fread(&inodo,sizeof(InodoTable),1,fp);
+
+    FILE *graph = fopen("grafica.dot","w");
+    fprintf(graph,"digraph G{\n");
+    fprintf(graph, "    nodo [shape=none, fontname=\"Century Gothic\" label=<");
+    fprintf(graph, "   <table border=\'0\' cellborder='1\' cellspacing=\'0\' bgcolor=\"lightsteelblue\">");
+    fprintf(graph, "    <tr><td align=\"left\"> <b>%s</b> </td></tr>\n",name.toStdString().c_str());
+    fprintf(graph, "    <tr><td bgcolor=\"white\">");
+    for (int i = 0; i < 15; i++) {
+        if(inodo.i_block[i] != -1){
+            if(i == 12){//Apuntador indirecto simple
+                BloqueApuntadores apuntador;
+                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueApuntadores))*inodo.i_block[i],SEEK_SET);
+                fread(&apuntador,sizeof(BloqueApuntadores),1,fp);
+                for(int j = 0; j < 16; j++){
+                    if(apuntador.b_pointer[j] != -1){
+                        fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*apuntador.b_pointer[j],SEEK_SET);
+                        fread(&archivo,sizeof(BloqueArchivo),1,fp);
+                        fprintf(graph,"%s <br/>",archivo.b_content);
+                    }
+                }
+            }else if(i == 13){
+
+            }else if(i == 14){
+
+            }else{//Apuntadores directos
+                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                fread(&archivo,sizeof(BloqueArchivo),1,fp);
+                fprintf(graph,"%s <br/>",archivo.b_content);
+            }
+        }
+    }
+    fprintf(graph, "    </td></tr>\n");
+    fprintf(graph, "   </table>>]\n");
+    fprintf(graph,"\n}");
+    fclose(graph);
+
+    fclose(fp);
+
+    string comando = "dot -T"+extension.toStdString()+" grafica.dot -o "+destino.toStdString();
+    system(comando.c_str());
+    cout << "Reporte file generado con exito " << endl;
 }
