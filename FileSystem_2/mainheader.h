@@ -81,5 +81,8 @@ void systemLoss(QString);
 void systemRecovery(QString);
 Usuario getUsuario(QString,int,int);
 bool isNumber(string);
+InodoTable crearInodo(int,char,int);
+BloqueCarpeta crearBloqueCarpeta();
+int buscarContentLibre(FILE*,int,InodoTable&,BloqueCarpeta&,BloqueApuntadores&,int&,int&,int&);
 
 #endif // MAINHEADER_H
