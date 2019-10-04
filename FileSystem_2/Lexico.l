@@ -13,7 +13,7 @@ letra [a-zA-Z]
 entero ("-")?[0-9]+
 caracter ({letra}|{entero})
 id {letra}({letra}|{entero}|"_")*
-password ({letra}|{entero}|[!$@+*-])+
+password ({letra}|{entero}|[!$@+*])+
 cadena "\""[^"\""]*"\""
 extension "."{id}
 diagonal "/"
