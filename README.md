@@ -80,9 +80,16 @@ Es una aplicacion en consola que simulara un sistema de archivos linux EXT2/EXT3
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte2.4_tree.jpg)
  - Cerramos sesion del usuario root e iniciamos con el usuario 'raulx' 
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/logoi.png)
- - Crearemos archivos en la carpeta docs
+ - Ahora crearemos archivos, empezaremos creando el archivo 'Tarea1.txt' con un tamano de 75 bytes en la carpeta docs. Cuando se crea un archivo, se crea un inodo y dependiendo si el archivo tiene el parametro -size o -cont se crean n bloques archivos necesarios para guardar la informacion de lo contrario no se crean bloques archivos solo el inodo. Los bloques archivos tienen una capacidad de 64 bytes, entonces si la informacion sobrepasa este tamaño se crea otro y asi sucesivamente hasta poder guardar toda la informacion. 
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mkfile1.png)
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.1_tree.jpg)
- 
+ - Como ahora cuesta un poco mas ver los cambios pondremos una imagen auxiliar, en donde se ve mejor que es lo que paso
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.1_zoom.png)
+ - Ahora crearemos el archivo 'Tarea2.txt' con un tamaño de 1700 bytes para poder ver el primer apuntador indirecto. 
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mkfile2.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.2_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.2_zoom.png)
+ - Ahora crearemos el archivo 'Tarea3.txt' que tendra el parametro -cont lo que indica que copiara el contenido de un archivo fisico de la computadora hacia el archivo creado en este caso hacia Tarea3.txt
  
 ## Herramientas utilizadas:
 - C/C++ (Lenguaje de programacion) 
