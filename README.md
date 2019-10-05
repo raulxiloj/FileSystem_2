@@ -89,7 +89,39 @@ Es una aplicacion en consola que simulara un sistema de archivos linux EXT2/EXT3
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mkfile2.png)
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.2_tree.jpg)
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.2_zoom.png)
- - Ahora crearemos el archivo 'Tarea3.txt' que tendra el parametro -cont lo que indica que copiara el contenido de un archivo fisico de la computadora hacia el archivo creado en este caso hacia Tarea3.txt
+ - Ahora crearemos el archivo 'Tarea3.txt' que tendra el parametro -cont lo que indica que copiara el contenido de un archivo fisico de la computadora hacia el archivo creado en este caso Tarea3.txt
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mkfile4.png)
+ - El contenido del archivo IA.txt es el siguiente: 
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/contenido.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.3_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.3_zoom.png)
+ - Y por ultimo crearemos un archivo de manera recursiva, o sea creando las carpetas si no existen. Esto se logra con el parametro -p y crearemos el archivo 'entrada.txt' en una ruta no existente
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mkfile3.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.4_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte3.4_zoom.png)
+ - Eliminaremos el archivo Tarea.txt que se encuentra en la carpeta docs, como se puede observar se elimino la referencia del bloque carpeta ahora esta como -1, desaparecio el inodo 15 y su respectivo bloque carpeta.
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/rem.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.1_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.1_zoom.png)
+ - Eliminaremos la carpeta usac, cuando se elimina una carpeta se elimina sus subcarpetas y archivos.
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/rem2.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.2_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.2_zoom.png)
+ - Movemos el archivo 'Tarea3.txt' a la carpeta home, si fuera una carpeta se moveria todo su contenido
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/mv.png)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.3_tree.jpg)
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte4.3_zoom.png)
+ - Cerramos sesion del usuario 'raulx' e iniciamos sesion con el usuario root 
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/logoi2.png)
+ - Cambiamos los permisos de la carpeta 'archivos 19' de manera recursiva, o sea que cualquier carpeta perteneciente a 'archivos 19' sera afectada. Y le cambiamos los permisos al archivo Tarea2.txt
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/chmod.png)
+ - Cerramos sesion y volvemos a iniciar sesion con 'raulx'
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/logoi3.png)
+ - Como el usuario root cambio los permisos ahora solo el puede escribir o leer en esa carpeta y archivo
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/errorPermisos.png)
+ - Simulacion de perdida del sistema, se borra todo el contenido de bloques e inodos a excepcion del journaling y SB.
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/loss.png)
+ - Gracias a que el sistema EXT3 cuenta con un registro por diario (journaling) se puede recuperar el sistema, lo cual consiste en volver a crear los grupos, usuarios, archivos y carpetas creadas antes de la perdida 
  
 ## Herramientas utilizadas:
 - C/C++ (Lenguaje de programacion) 
