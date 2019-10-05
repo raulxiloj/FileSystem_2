@@ -1776,12 +1776,27 @@ void recorrerCAT(Nodo *raiz){
            fread(&inodo,sizeof(InodoTable),1,fp);
            bool permisos = permisosDeLectura(inodo.i_perm,(inodo.i_uid == currentSession.id_user),(inodo.i_gid == currentSession.id_grp));
            if(permisos || (currentSession.id_user == 1 && currentSession.id_grp == 1)){
-               for (int i = 0; i < 12; i++) {
+               for (int i = 0; i < 15; i++) {
                    if(inodo.i_block[i] != -1){
-                       BloqueArchivo archivo;
-                       fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
-                       fread(&archivo,sizeof(BloqueCarpeta),1,fp);
-                       cadena += archivo.b_content;
+                       if(i < 12){
+                           BloqueArchivo archivo;
+                           fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                           fread(&archivo,sizeof(BloqueCarpeta),1,fp);
+                           cadena += archivo.b_content;
+                       }else if(i == 12){//Apuntador indirecto simple
+                            BloqueApuntadores apuntador;
+                            fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*inodo.i_block[i],SEEK_SET);
+                            fread(&apuntador,sizeof(BloqueApuntadores),1,fp);
+                            for(int j = 0; j < 16; j++){
+                                if(apuntador.b_pointer[j] != -1){
+                                    BloqueArchivo archivo;
+                                    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*apuntador.b_pointer[j],SEEK_SET);
+                                    fread(&archivo,sizeof(BloqueArchivo),1,fp);
+                                    cadena += archivo.b_content;
+                                }
+
+                            }
+                       }
                    }
                }
                cout << cadena << endl;
@@ -1796,6 +1811,7 @@ void recorrerCAT(Nodo *raiz){
 
 void recorrerREM(Nodo *raiz){
     QString path = raiz->hijos.at(0).valor;
+    path = path.replace("\"","");
     char auxPath[500];
     strcpy(auxPath,path.toStdString().c_str());
     if(flag_login){
@@ -1807,21 +1823,33 @@ void recorrerREM(Nodo *raiz){
             if(permisos){
                 SuperBloque super;
                 BloqueCarpeta carpeta;
+                BloqueApuntadores apuntador;
                 int bloque = 0;
                 int posicion = 0;
+                int pointer = -1;
+                int posPointer = 0;
                 fseek(fp,currentSession.inicioSuper,SEEK_SET);
                 fread(&super,sizeof(SuperBloque),1,fp);
                 //Obtenemos el bloque y la poisicion de la carpeta/archivo a eliminar
-                bloqueCarpetaArchivo(fp,auxPath,bloque,posicion);
-                //Eliminar la referencia carpeta/archivo del bloque carpeta
-                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
-                fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
-                memset(carpeta.b_content[posicion].b_name,0,sizeof(carpeta.b_content[posicion].b_name));
-                carpeta.b_content[posicion].b_inodo = -1;
-                fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
-                fwrite(&carpeta,sizeof(BloqueCarpeta),1,fp);
+                bloqueCarpetaArchivo(fp,auxPath,bloque,posicion,pointer,posPointer);
+                if(pointer == -1){
+                    //Eliminar la referencia carpeta/archivo del bloque carpeta
+                    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+                    fread(&carpeta,sizeof(BloqueCarpeta),1,fp);
+                    memset(carpeta.b_content[posicion].b_name,0,sizeof(carpeta.b_content[posicion].b_name));
+                    carpeta.b_content[posicion].b_inodo = -1;
+                    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*bloque,SEEK_SET);
+                    fwrite(&carpeta,sizeof(BloqueCarpeta),1,fp);
+                }else{
+                    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*pointer,SEEK_SET);
+                    fread(&apuntador,sizeof(BloqueApuntadores),1,fp);
+                    apuntador.b_pointer[posPointer] = -1;
+                    fseek(fp,super.s_block_start + static_cast<int>(sizeof(BloqueCarpeta))*pointer,SEEK_SET);
+                    fwrite(&apuntador,sizeof(BloqueApuntadores),1,fp);
+                }
                 //Eliminar la carpeta/archivo
                 eliminarCarpetaArchivo(fp,existe);
+                cout << "Removido con exito" << endl;
             }else
                 cout << "ERROR: alguna carpeta hija no posee permisos de escritura" << endl;
         }else
@@ -4285,7 +4313,9 @@ void moverCarpetaArchivo(FILE *stream, int carpeta, char* path,int destino){
     //Bloque y posicion de la carpeta/archivo a mover
     int bloque = 0;
     int posicion = 0;
-    bloqueCarpetaArchivo(stream,path,bloque,posicion);
+    int pointer = -1;
+    int posPointer = 0;
+    bloqueCarpetaArchivo(stream,path,bloque,posicion,pointer,posPointer);
     //Nombre de la carpeta/archivo a mover y el inodo al que apunta
     char tempNombre[15];
     int aux = 0;
@@ -4447,10 +4477,11 @@ int buscarCarpetaArchivo(FILE *stream, char* path){
  * @param int &posicion = Variable donde se almacenara la posicion en el bloque donde se encuentra la carpeta/archivo
  * Los ultimos dos parametros son por referencia porque se modificara su valor
 */
-void bloqueCarpetaArchivo(FILE *stream, char* path, int &block, int &posicion){
+void bloqueCarpetaArchivo(FILE *stream, char* path, int &block, int &posicion,int &pointer,int &posPointer){
     SuperBloque super;
     InodoTable inodo;
     BloqueCarpeta carpeta;
+    BloqueApuntadores apuntador;
 
     QList<string> lista = QList<string>();
     char *token = strtok(path,"/");
@@ -4475,15 +4506,40 @@ void bloqueCarpetaArchivo(FILE *stream, char* path, int &block, int &posicion){
             if(inodo.i_block[i] != -1){
                 int byteBloque = byteInodoBloque(stream,inodo.i_block[i],'2');
                 fseek(stream,byteBloque,SEEK_SET);
-                fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
-                for (int j = 0; j < 4; j++) {
-                    if((cont2 == cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){//Tendria que ser la carpeta
-                        block = inodo.i_block[i];
-                        posicion = j;
-                    }else if((cont2 != cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){
-                        numInodo = byteInodoBloque(stream,carpeta.b_content[j].b_inodo,'1');
-                        siguiente = 1;
-                        break;
+                if(i < 12){
+                    fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                    for (int j = 0; j < 4; j++) {
+                        if((cont2 == cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){//Tendria que ser la carpeta
+                            block = inodo.i_block[i];
+                            posicion = j;
+                        }else if((cont2 != cont - 1) && (strcasecmp(carpeta.b_content[j].b_name,lista.at(cont2).c_str()) == 0)){
+                            numInodo = byteInodoBloque(stream,carpeta.b_content[j].b_inodo,'1');
+                            siguiente = 1;
+                            break;
+                        }
+                    }
+                }else if(i == 12){
+                    fread(&apuntador,sizeof(BloqueApuntadores),1,stream);
+                    for(int j = 0; j < 16; j++){
+                        if(apuntador.b_pointer[j] != -1){
+                            byteBloque = byteInodoBloque(stream,apuntador.b_pointer[j],'2');
+                            fseek(stream,byteBloque,SEEK_SET);
+                            fread(&carpeta,sizeof(BloqueCarpeta),1,stream);
+                            for (int k = 0; k < 4; k++) {
+                                if((cont2 == cont - 1) && (strcasecmp(carpeta.b_content[k].b_name,lista.at(cont2).c_str()) == 0)){//Tendria que ser la carpeta
+                                    pointer = inodo.i_block[i];
+                                    posPointer = j;
+                                    block = apuntador.b_pointer[j];
+                                    posicion = k;
+                                }else if((cont2 != cont - 1) && (strcasecmp(carpeta.b_content[k].b_name,lista.at(cont2).c_str()) == 0)){
+                                    numInodo = byteInodoBloque(stream,carpeta.b_content[k].b_inodo,'1');
+                                    siguiente = 1;
+                                    break;
+                                }
+                            }
+                            if(siguiente == 1)
+                                break;
+                        }
                     }
                 }
                 if(siguiente == 1)

@@ -67,7 +67,7 @@ int nuevaCarpeta(FILE*,char,bool,char*,int);
 int crearArchivo(QString,bool,int,QString);
 int nuevoArchivo(FILE*,char,bool,char*,int,QString,int,char*);
 int buscarCarpetaArchivo(FILE*,char*);
-void bloqueCarpetaArchivo(FILE*,char*,int&,int&);
+void bloqueCarpetaArchivo(FILE*,char*,int&,int&,int&,int&);
 int byteInodoBloque(FILE*,int,char);
 bool permisosDeEscritura(int,bool,bool);
 bool permisosDeLectura(int,bool,bool);
