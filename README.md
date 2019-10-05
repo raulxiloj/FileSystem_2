@@ -121,7 +121,10 @@ Es una aplicacion en consola que simulara un sistema de archivos linux EXT2/EXT3
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/errorPermisos.png)
  - Simulacion de perdida del sistema, se borra todo el contenido de bloques e inodos a excepcion del journaling y SB.
  ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/loss.png)
- - Gracias a que el sistema EXT3 cuenta con un registro por diario (journaling) se puede recuperar el sistema, lo cual consiste en volver a crear los grupos, usuarios, archivos y carpetas creadas antes de la perdida 
+ - Gracias a que el sistema EXT3 cuenta con un registro por diario (journaling) se puede recuperar el sistema, lo cual consiste en formatear la particion y volver a crear los grupos, usuarios, archivos y carpetas creadas antes de la perdida.
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Comandos/recovery.png)
+ - El arbol de inodos y bloques quedaria asi
+ ![No se encuentra la imagen](https://github.com/raulxiloj/FileSystem_2/blob/master/Imagenes/Reportes/reporte7_tree.jpg)
  
 ## Herramientas utilizadas:
 - C/C++ (Lenguaje de programacion) 
