@@ -1,3 +1,4 @@
+![](https://img.shields.io/github/stars/raulxiloj/FileSystem_2) ![](https://img.shields.io/github/forks/raulxiloj/FileSystem_2) ![](https://img.shields.io/github/issues/raulxiloj/FileSystem_2)
 # Sistema de archivos EXT2/EXT3
 
 Es una aplicacion en consola que simulara un sistema de archivos linux EXT2/EXT3. No distinguira entre mayúsculas y minúsculas. Solo se puede colocar un comando por línea. Toda la informacion se detalla mas en el archivo Fase2.pdf
